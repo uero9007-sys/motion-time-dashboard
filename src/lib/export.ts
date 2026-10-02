@@ -1,5 +1,4 @@
 // สร้างข้อมูลสำหรับ Export (Excel ข้อมูลดิบ + ข้อมูลรายงาน PDF) ของ Process ใหญ่ที่เลือก
-import * as XLSX from 'xlsx';
 import type { DefectLog, Step, Study } from '../types';
 import { calculateEfficiency, calculateStandardTime, mean, sampleStdDev } from './ie';
 
@@ -132,8 +131,10 @@ function buildPivotRows(processName: string, rows: StudyRow[]) {
 }
 
 // Excel ข้อมูลดิบ: ตารางแบบ "1 แถว = 1 ค่าสังเกต" เหมาะกับ Pivot Table / Minitab / Python
-export function exportRawExcel(groupName: string, rows: StudyRow[]) {
-  const workbook = XLSX.utils.book_new();
+// โหลดไลบรารี xlsx (~330 kB) เฉพาะตอนกด Export เพื่อให้หน้าแรกเปิดเร็วขึ้น
+export async function exportRawExcel(groupName: string, rows: StudyRow[]) {
+  const { utils, writeFile } = await import('xlsx');
+  const workbook = utils.book_new();
 
   const studySheet = rows.map((r) => ({
     'Study ID': r.study.id,
@@ -204,10 +205,10 @@ export function exportRawExcel(groupName: string, rows: StudyRow[]) {
 
   const addSheet = (data: object[], name: string, emptyHeader: string[]) => {
     const sheet = data.length
-      ? XLSX.utils.json_to_sheet(data, { cellDates: true, dateNF: 'yyyy-mm-dd hh:mm:ss' })
-      : XLSX.utils.aoa_to_sheet([emptyHeader]);
+      ? utils.json_to_sheet(data, { cellDates: true, dateNF: 'yyyy-mm-dd hh:mm:ss' })
+      : utils.aoa_to_sheet([emptyHeader]);
     sheet['!autofilter'] = { ref: sheet['!ref'] || 'A1' };
-    XLSX.utils.book_append_sheet(workbook, sheet, name);
+    utils.book_append_sheet(workbook, sheet, name);
   };
 
   addSheet(stepSheet, 'Raw_Steps', ['Study ID', 'ชื่อ Step', 'เวลาที่จับได้ (s)']);
@@ -226,9 +227,9 @@ export function exportRawExcel(groupName: string, rows: StudyRow[]) {
     let name = safeSheetName(`สรุป ${processName}`);
     for (let i = 2; usedNames.has(name); i++) name = safeSheetName(`สรุป ${processName}`).substring(0, 28) + ` ${i}`;
     usedNames.add(name);
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(buildPivotRows(processName, processRows)), name);
+    utils.book_append_sheet(workbook, utils.json_to_sheet(buildPivotRows(processName, processRows)), name);
   });
 
   const stamp = localDateStamp();
-  XLSX.writeFile(workbook, `MTS-RawData-${groupName.replace(/[\\/:*?"<>|]/g, '')}-${stamp}.xlsx`);
+  writeFile(workbook, `MTS-RawData-${groupName.replace(/[\\/:*?"<>|]/g, '')}-${stamp}.xlsx`);
 }

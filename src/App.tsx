@@ -286,19 +286,23 @@ function App() {
     return buildStudyRows(filteredStudies, rawSteps, defects || []);
   };
 
-  const exportExcel = async () => {
+  // ใช้ finally เพื่อให้ปุ่ม Export กลับมากดได้เสมอ แม้ Export จะล้มเหลว
+  const runExport = async (action: (rows: StudyRow[]) => void | Promise<void>) => {
     setIsExporting(true);
-    const rows = await loadExportRows();
-    if (rows) exportRawExcel(selectedGroupName, rows);
-    setIsExporting(false);
+    try {
+      const rows = await loadExportRows();
+      if (rows) await action(rows);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const exportPdf = async () => {
-    setIsExporting(true);
-    const rows = await loadExportRows();
-    if (rows) setReport({ rows, generatedAt: new Date().toISOString() });
-    setIsExporting(false);
-  };
+  const exportExcel = () => runExport((rows) => exportRawExcel(selectedGroupName, rows));
+
+  const exportPdf = () => runExport((rows) => setReport({ rows, generatedAt: new Date().toISOString() }));
 
   // เมื่อรายงานพร้อมแล้ว รอฟอนต์โหลดเสร็จ แล้วเปิดหน้าต่าง Print (เลือก "Save as PDF")
   useEffect(() => {
