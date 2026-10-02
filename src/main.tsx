@@ -16,10 +16,10 @@ if (missingEnv.length > 0) {
     </div>,
   )
 } else {
-  import('./App.tsx').then(({ default: App }) => {
+  import('./components/AuthGate.tsx').then(({ default: AuthGate }) => {
     root.render(
       <StrictMode>
-        <App />
+        <AuthGate />
       </StrictMode>,
     )
   })

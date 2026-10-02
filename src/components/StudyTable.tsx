@@ -9,7 +9,8 @@ type Props = {
   defectsCache: Record<string, DefectLog[]>;
   isLoadingDetail: boolean;
   onToggle: (studyId: string) => void;
-  onStepRename: (step: Step, newName: string, studyId: string, inputEl: HTMLInputElement) => void;
+  // ไม่ส่งมา = ผู้ใช้ไม่มีสิทธิ์แก้ไข (Viewer) จะแสดงชื่อ Step แบบอ่านอย่างเดียว
+  onStepRename?: (step: Step, newName: string, studyId: string, inputEl: HTMLInputElement) => void;
 };
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString('th-TH');
@@ -46,23 +47,27 @@ export default function StudyTable({ studies, expandedId, stepsCache, defectsCac
                       <p>กำลังโหลดรายละเอียด...</p>
                     ) : (
                       <div className="detail-content">
-                        <h3>รายการ Step (แก้ชื่อได้ พิมพ์แล้วกด Enter)</h3>
+                        <h3>{onStepRename ? 'รายการ Step (แก้ชื่อได้ พิมพ์แล้วกด Enter)' : 'รายการ Step'}</h3>
                         <table className="inner-table">
                           <thead><tr><th>ชื่อ Step</th><th>เวลา (วินาที)</th></tr></thead>
                           <tbody>
                             {steps.map((step) => (
                               <tr key={`${step.id}-${step.name}`}>
                                 <td>
-                                  <input
-                                    className="step-name-edit"
-                                    defaultValue={step.name}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        (e.target as HTMLInputElement).blur();
-                                      }
-                                    }}
-                                    onBlur={(e) => onStepRename(step, e.target.value, study.id, e.target)}
-                                  />
+                                  {onStepRename ? (
+                                    <input
+                                      className="step-name-edit"
+                                      defaultValue={step.name}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          (e.target as HTMLInputElement).blur();
+                                        }
+                                      }}
+                                      onBlur={(e) => onStepRename(step, e.target.value, study.id, e.target)}
+                                    />
+                                  ) : (
+                                    step.name
+                                  )}
                                 </td>
                                 <td>{formatTime(step.time_ms)}s</td>
                               </tr>

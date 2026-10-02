@@ -19,10 +19,18 @@ import LearnPage from './pages/LearnPage';
 import AnalysisPage from './pages/AnalysisPage';
 import LineBalancePage from './pages/LineBalancePage';
 import SettingsPage from './pages/SettingsPage';
+import MembersPage from './pages/MembersPage';
+import { canEditData, type Account, type Membership } from './lib/auth';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type DashboardSettings } from './lib/settings';
 import './App.css';
 
-function App() {
+type Props = {
+  organization: Membership;
+  account: Account;
+};
+
+function App({ organization, account }: Props) {
+  const orgId = organization.id;
   const [settings, setSettings] = useState<DashboardSettings>(loadSettings);
   const [page, setPage] = useState<Page>(settings.startPage);
   const [studies, setStudies] = useState<Study[]>([]);
@@ -57,6 +65,7 @@ function App() {
     const { data, error } = await supabase
       .from('studies')
       .select('*')
+      .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching studies:', error);
@@ -70,6 +79,7 @@ function App() {
     const { data, error } = await supabase
       .from('process_groups')
       .select('*')
+      .eq('organization_id', orgId)
       .order('name', { ascending: true });
     if (error) {
       console.error('Error fetching process groups:', error);
@@ -82,10 +92,11 @@ function App() {
     const { data: studiesData, error: studiesError } = await supabase
       .from('studies')
       .select('*')
+      .eq('organization_id', orgId)
       .order('created_at', { ascending: true });
     if (studiesError || !studiesData) return;
 
-    const { data: allSteps, error: stepsError } = await supabase.from('steps').select('*');
+    const { data: allSteps, error: stepsError } = await supabase.from('steps').select('*').eq('organization_id', orgId);
     if (stepsError || !allSteps) return;
 
     setRawSteps(allSteps);
@@ -131,6 +142,8 @@ function App() {
     fetchStudies();
     fetchChartData();
     fetchProcessGroups();
+    // โหลดครั้งเดียวต่อบริษัท: AuthGate ใส่ key={organization.id} ทำให้ App เริ่มใหม่เมื่อสลับบริษัทอยู่แล้ว
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadStepsForStudy = async (studyId: string) => {
@@ -267,6 +280,7 @@ function App() {
     const { data: defects, error } = await supabase
       .from('defect_logs')
       .select('*')
+      .eq('organization_id', orgId)
       .in('study_id', filteredStudies.map((s) => s.id));
     if (error) {
       console.error('Error fetching defects:', error);
@@ -320,7 +334,15 @@ function App() {
   }, [report, selectedGroupName]);
 
   const navigate = (next: Page) => (next === 'home' ? backToPicker() : setPage(next));
-  const layout = { page, onNavigate: navigate };
+  const layout = { page, onNavigate: navigate, organization, account };
+
+  if (page === 'members') {
+    return (
+      <AppLayout {...layout}>
+        <MembersPage organization={organization} account={account} />
+      </AppLayout>
+    );
+  }
 
   if (page === 'learn') {
     return (
@@ -341,6 +363,7 @@ function App() {
           isLoading={isLoading}
           cvStable={settings.cvStable}
           cvWatch={settings.cvWatch}
+          organizationId={orgId}
         />
       </AppLayout>
     );
@@ -479,7 +502,7 @@ function App() {
           defectsCache={defectsCache}
           isLoadingDetail={isLoadingDetail}
           onToggle={toggleExpand}
-          onStepRename={handleStepNameEdit}
+          onStepRename={canEditData(organization.role) ? handleStepNameEdit : undefined}
         />
       )}
     </AppLayout>

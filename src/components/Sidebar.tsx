@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ROLE_LABELS, type Account, type Membership } from '../lib/auth';
 import type { Page } from '../types';
 
 const NAV_ITEMS: { page: Page; label: string }[] = [
@@ -6,15 +7,18 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'learn', label: 'การศึกษา' },
   { page: 'analysis', label: 'การวิเคราะห์' },
   { page: 'calc', label: 'การคำนวณ' },
+  { page: 'members', label: 'สมาชิก' },
   { page: 'settings', label: 'ตั้งค่า' },
 ];
 
 type Props = {
   page: Page;
   onNavigate: (page: Page) => void;
+  organization: Membership;
+  account: Account;
 };
 
-export function Sidebar({ page, onNavigate }: Props) {
+export function Sidebar({ page, onNavigate, organization, account }: Props) {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -33,15 +37,35 @@ export function Sidebar({ page, onNavigate }: Props) {
           </a>
         ))}
       </nav>
+      <div className="sidebar-account">
+        {account.memberships.length > 1 ? (
+          <select
+            className="org-switcher"
+            value={organization.id}
+            onChange={(e) => account.onSwitchOrganization(e.target.value)}
+            aria-label="เลือกบริษัท"
+          >
+            {account.memberships.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="sidebar-org">{organization.name}</span>
+        )}
+        <span className="sidebar-user" title={account.email}>
+          {account.email} · {ROLE_LABELS[organization.role]}
+        </span>
+        <button className="link-button" onClick={account.onSignOut}>ออกจากระบบ</button>
+      </div>
     </aside>
   );
 }
 
 // โครงหน้าที่ทุกหน้าใช้ร่วมกัน: Sidebar ด้านซ้าย + เนื้อหาหลัก
-export function AppLayout({ page, onNavigate, children, after }: Props & { children: ReactNode; after?: ReactNode }) {
+export function AppLayout({ children, after, ...sidebar }: Props & { children: ReactNode; after?: ReactNode }) {
   return (
     <div className="app-layout">
-      <Sidebar page={page} onNavigate={onNavigate} />
+      <Sidebar {...sidebar} />
       <main className="main-content">{children}</main>
       {after}
     </div>

@@ -12,6 +12,7 @@ type Props = {
   isLoading: boolean;
   cvStable: number;
   cvWatch: number;
+  organizationId: string;
 };
 
 type Stability = { label: string; className: string };
@@ -31,7 +32,7 @@ function getStability(cv: number, stable: number, watch: number): Stability {
 }
 
 const fmt = (n: number, digits = 2) => n.toFixed(digits);
-export default function AnalysisPage({ studies, steps, metrics, groups, isLoading, cvStable, cvWatch }: Props) {
+export default function AnalysisPage({ studies, steps, metrics, groups, isLoading, cvStable, cvWatch, organizationId }: Props) {
   const [defects, setDefects] = useState<DefectLog[]>([]);
   const [pickedGroupId, setPickedGroupId] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
     supabase
       .from('defect_logs')
       .select('*')
+      .eq('organization_id', organizationId)
       .then(({ data, error }) => {
         if (error) console.error('Error fetching defect logs:', error);
         else if (!cancelled && data) setDefects(data);
@@ -47,7 +49,7 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [organizationId]);
 
   // ---------- เปรียบเทียบทุก Process ใหญ่ ----------
   const groupRows = groups

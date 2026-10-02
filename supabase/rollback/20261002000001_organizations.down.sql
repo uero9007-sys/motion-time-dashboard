@@ -1,9 +1,9 @@
 -- ยกเลิกขั้นที่ 1: ลบระบบบริษัททั้งหมด ข้อมูล Study / Step / Defect เดิมยังอยู่ครบ
--- ถ้ารันขั้นที่ 2 ไปแล้ว ให้รัน 20261002000002_enable_rls.down.sql ก่อน
+-- ถ้ารันขั้นที่ 3 ไปแล้ว ให้รัน 20261002000003_enable_rls.down.sql ก่อน
 
 begin;
 
--- policy ของขั้นที่ 2 อ้างถึงคอลัมน์ organization_id ต้องลบก่อนจึงจะลบคอลัมน์ได้
+-- policy ของขั้นที่ 3 อ้างถึงคอลัมน์ organization_id ต้องลบก่อนจึงจะลบคอลัมน์ได้
 do $$
 declare
   t text;
@@ -29,6 +29,7 @@ alter table public.defect_logs    drop column if exists organization_id;
 drop function if exists public.inherit_study_organization();
 drop function if exists public.check_study_group_organization();
 drop function if exists public.accept_invitations();
+drop function if exists public.list_organization_members(uuid);
 
 drop table if exists public.invitations;
 drop table if exists public.organization_members;

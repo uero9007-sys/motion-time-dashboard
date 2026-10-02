@@ -41,4 +41,4 @@ export type StudyMetric = {
   quantity: number;
 };
 
-export type Page = 'home' | 'learn' | 'analysis' | 'calc' | 'settings';
+export type Page = 'home' | 'learn' | 'analysis' | 'calc' | 'members' | 'settings';
