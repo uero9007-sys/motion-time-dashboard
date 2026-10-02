@@ -40,3 +40,12 @@ export function sampleStdDev(values: number[]) {
   const m = mean(values);
   return Math.sqrt(values.reduce((sum, v) => sum + (v - m) ** 2, 0) / (values.length - 1));
 }
+
+// จำนวนรอบที่ควรจับ N = (k·s / (h·x̄))² ปัดขึ้น — ต้องมีข้อมูลอย่างน้อย 2 รอบ
+export function requiredSampleSize(times: number[], confidence: number, errorPercent: number) {
+  const n = times.length;
+  const m = mean(times);
+  const sd = sampleStdDev(times);
+  const required = n > 1 && m > 0 ? Math.ceil(((getKValue(confidence) * sd) / ((errorPercent / 100) * m)) ** 2) : 0;
+  return { n, mean: m, sd, required, remaining: Math.max(required - n, 0) };
+}

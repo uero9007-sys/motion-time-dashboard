@@ -7,8 +7,8 @@ import {
   UNGROUPED_ID,
   calculateEfficiency,
   calculateStandardTime,
-  getKValue,
   matchesGroup,
+  requiredSampleSize,
 } from './lib/ie';
 import type { DefectLog, Page, ProcessGroup, Step, Study, StudyMetric } from './types';
 import LearnPage from './pages/LearnPage';
@@ -205,18 +205,13 @@ function App() {
       ? filteredMetrics.reduce((sum, m) => sum + m.manHourPerUnit, 0) / filteredMetrics.length
       : 0;
 
-  const sampleTimes = filteredMetrics.map((m) => m.totalTimeSec);
-  const sampleN = sampleTimes.length;
-  const sampleMean = sampleN > 0 ? sampleTimes.reduce((a, b) => a + b, 0) / sampleN : 0;
-  const sampleVariance =
-    sampleN > 1 ? sampleTimes.reduce((sum, t) => sum + Math.pow(t - sampleMean, 2), 0) / (sampleN - 1) : 0;
-  const sampleStdDev = Math.sqrt(sampleVariance);
-  const kValue = getKValue(confidenceLevel);
-  const hValue = errorPercent / 100;
-  const requiredN =
-    sampleN > 1 && sampleMean > 0 ? Math.pow((kValue * sampleStdDev) / (hValue * sampleMean), 2) : 0;
-  const requiredNRounded = Math.ceil(requiredN);
-  const remainingRounds = Math.max(requiredNRounded - sampleN, 0);
+  const {
+    n: sampleN,
+    mean: sampleMean,
+    sd: sampleStdDev,
+    required: requiredNRounded,
+    remaining: remainingRounds,
+  } = requiredSampleSize(filteredMetrics.map((m) => m.totalTimeSec), confidenceLevel, errorPercent);
 
   // แก้ชื่อ Step รายแถว พร้อมยืนยัน 2 ชั้น (ยังคงมีไว้ให้แก้เองได้ในกรณีจำเป็น)
   const handleStepNameEdit = async (

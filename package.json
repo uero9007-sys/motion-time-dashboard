@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "serve": "npm run build && vite preview --host --port 4173",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
@@ -26,6 +27,7 @@
     "gh-pages": "^6.3.0",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
   }
 }
