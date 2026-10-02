@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import * as XLSX from 'xlsx';
 import { supabase } from './lib/supabase';
+import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
+import ProcessReport from './components/ProcessReport';
 import {
   UNGROUPED_ID,
   calculateEfficiency,
@@ -31,6 +32,8 @@ function App() {
   const [studyMetrics, setStudyMetrics] = useState<StudyMetric[]>([]);
   const [confidenceLevel, setConfidenceLevel] = useState<number>(settings.confidence);
   const [errorPercent, setErrorPercent] = useState<number>(settings.errorPercent);
+  const [isExporting, setIsExporting] = useState(false);
+  const [report, setReport] = useState<{ rows: StudyRow[]; generatedAt: string } | null>(null);
 
   const updateSettings = (patch: Partial<DashboardSettings>) => {
     const next = { ...settings, ...patch };
@@ -265,79 +268,62 @@ function App() {
     setExpandedId(null);
   };
 
-  const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    const byProcess: Record<string, Study[]> = {};
-
-    filteredStudies.forEach((s) => {
-      const key = s.process_name || 'ไม่ระบุ';
-      if (!byProcess[key]) byProcess[key] = [];
-      byProcess[key].push(s);
-    });
-
-    Object.entries(byProcess).forEach(([processName, processStudies]) => {
-      const sorted = [...processStudies].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-
-      const stepOrderMap = new Map<string, number>();
-      sorted.forEach((study) => {
-        rawSteps
-          .filter((s) => s.study_id === study.id)
-          .forEach((step) => {
-            if (!stepOrderMap.has(step.name)) stepOrderMap.set(step.name, step.order_index);
-          });
-      });
-      const stepNames = Array.from(stepOrderMap.entries())
-        .sort((a, b) => a[1] - b[1])
-        .map(([name]) => name);
-
-      const rows: Record<string, string | number>[] = [];
-      sorted.forEach((study, idx) => {
-        const studySteps = rawSteps.filter((s) => s.study_id === study.id);
-        const row: Record<string, string | number> = { 'รอบที่': `รอบที่ ${idx + 1}` };
-        let totalSec = 0;
-
-        stepNames.forEach((name) => {
-          const matches = studySteps.filter((s) => s.name === name && s.time_ms > 0);
-          if (matches.length === 0) {
-            row[name] = '';
-          } else {
-            const sumMs = matches.reduce((sum, s) => sum + s.time_ms, 0);
-            const sec = Number((sumMs / 1000).toFixed(2));
-            row[name] = sec;
-            totalSec += sec;
-          }
-        });
-
-        row['จำนวนที่ผลิต'] = study.quantity_produced || 1;
-        row['เวลารวม'] = Number(totalSec.toFixed(2));
-        rows.push(row);
-      });
-
-      const avgRow: Record<string, string | number> = { 'รอบที่': `เฉลี่ย ${processName}` };
-      stepNames.forEach((name) => {
-        const vals = rows.map((r) => r[name]).filter((v) => typeof v === 'number') as number[];
-        avgRow[name] = vals.length ? Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)) : '';
-      });
-      const qtyVals = rows.map((r) => r['จำนวนที่ผลิต'] as number);
-      avgRow['จำนวนที่ผลิต'] = Number((qtyVals.reduce((a, b) => a + b, 0) / qtyVals.length).toFixed(2));
-      const totalVals = rows.map((r) => r['เวลารวม'] as number);
-      avgRow['เวลารวม'] = Number((totalVals.reduce((a, b) => a + b, 0) / totalVals.length).toFixed(2));
-
-      const finalRows = [avgRow, ...rows];
-      const sheet = XLSX.utils.json_to_sheet(finalRows);
-      const safeName = processName.substring(0, 31).replace(/[\\/?*[\]]/g, '');
-      XLSX.utils.book_append_sheet(workbook, sheet, safeName || 'Process');
-    });
-
-    if (Object.keys(byProcess).length === 0) {
+  // โหลด Defect ของทุกรอบใน Process ที่เลือก แล้วรวมเป็นข้อมูลรายรอบสำหรับ Export
+  const loadExportRows = async (): Promise<StudyRow[] | null> => {
+    if (filteredStudies.length === 0) {
       alert('ไม่มีข้อมูลให้ Export');
-      return;
+      return null;
     }
-
-    XLSX.writeFile(workbook, `motion-time-study-${Date.now()}.xlsx`);
+    const { data: defects, error } = await supabase
+      .from('defect_logs')
+      .select('*')
+      .in('study_id', filteredStudies.map((s) => s.id));
+    if (error) {
+      console.error('Error fetching defects:', error);
+      alert('โหลดข้อมูล Defect ไม่สำเร็จ กรุณาลองใหม่');
+      return null;
+    }
+    return buildStudyRows(filteredStudies, rawSteps, defects || []);
   };
+
+  const exportExcel = async () => {
+    setIsExporting(true);
+    const rows = await loadExportRows();
+    if (rows) exportRawExcel(selectedGroupName, rows);
+    setIsExporting(false);
+  };
+
+  const exportPdf = async () => {
+    setIsExporting(true);
+    const rows = await loadExportRows();
+    if (rows) setReport({ rows, generatedAt: new Date().toISOString() });
+    setIsExporting(false);
+  };
+
+  // เมื่อรายงานพร้อมแล้ว รอฟอนต์โหลดเสร็จ แล้วเปิดหน้าต่าง Print (เลือก "Save as PDF")
+  useEffect(() => {
+    if (!report) return;
+    const root = document.documentElement;
+    root.classList.add('printing-report');
+    const previousTitle = document.title;
+    document.title = `รายงาน MTS - ${selectedGroupName} - ${localDateStamp()}`;
+    const done = () => {
+      root.classList.remove('printing-report');
+      document.title = previousTitle;
+      setReport(null);
+    };
+    window.addEventListener('afterprint', done, { once: true });
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      if (!cancelled) requestAnimationFrame(() => window.print());
+    });
+    return () => {
+      cancelled = true;
+      window.removeEventListener('afterprint', done);
+      root.classList.remove('printing-report');
+      document.title = previousTitle;
+    };
+  }, [report, selectedGroupName]);
 
   const sidebar = (
     <aside className="sidebar">
@@ -518,7 +504,12 @@ function App() {
                 <option key={group.id} value={group.id}>{group.name}</option>
               ))}
             </select>
-            <button className="btn" onClick={exportExcel}>Export Excel</button>
+            <button className="btn" onClick={exportPdf} disabled={isExporting} title="รายงานสรุปของ Process นี้ (เลือก Save as PDF ในหน้าต่าง Print)">
+              รายงาน PDF
+            </button>
+            <button className="btn" onClick={exportExcel} disabled={isExporting} title="ตารางข้อมูลดิบทุกรอบ ทุก Step และ Defect">
+              Excel ข้อมูลดิบ
+            </button>
             <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
           </div>
         </div>
@@ -731,6 +722,17 @@ function App() {
           </table>
         )}
       </main>
+      {report && (
+        <ProcessReport
+          groupName={selectedGroupName}
+          rows={report.rows}
+          generatedAt={report.generatedAt}
+          stepSummaries={buildStepSummaries(report.rows)}
+          sampleSize={{ confidence: confidenceLevel, errorPercent, required: requiredNRounded }}
+          cvStable={settings.cvStable}
+          cvWatch={settings.cvWatch}
+        />
+      )}
     </div>
   );
 }
