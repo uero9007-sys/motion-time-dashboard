@@ -1,8 +1,12 @@
-import { Fragment, useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
 import ProcessReport from './components/ProcessReport';
+import { AppLayout } from './components/Sidebar';
+import CycleTimeChart from './components/CycleTimeChart';
+import SampleSizeCard from './components/SampleSizeCard';
+import StudyTable from './components/StudyTable';
+import ProcessPickerPage, { type ProcessCard } from './pages/ProcessPickerPage';
 import {
   UNGROUPED_ID,
   calculateEfficiency,
@@ -156,9 +160,6 @@ function App() {
     setIsLoadingDetail(false);
   };
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleString('th-TH');
-  const formatTime = (ms: number) => (ms / 1000).toFixed(2);
-
   const filteredStudies =
     selectedGroupId === null ? [] : studies.filter((s) => matchesGroup(s.process_group_id, selectedGroupId));
 
@@ -171,7 +172,7 @@ function App() {
     ...(ungroupedStudyCount > 0 ? [{ id: UNGROUPED_ID, name: 'ไม่ระบุ Process ใหญ่' }] : []),
   ];
 
-  const processCards = groupOptions.map((group) => {
+  const processCards: ProcessCard[] = groupOptions.map((group) => {
     const groupStudies = studies.filter((s) => matchesGroup(s.process_group_id, group.id));
     const lastCreatedAt = groupStudies.reduce<string | null>(
       (latest, s) => (!latest || s.created_at > latest ? s.created_at : latest),
@@ -205,13 +206,7 @@ function App() {
       ? filteredMetrics.reduce((sum, m) => sum + m.manHourPerUnit, 0) / filteredMetrics.length
       : 0;
 
-  const {
-    n: sampleN,
-    mean: sampleMean,
-    sd: sampleStdDev,
-    required: requiredNRounded,
-    remaining: remainingRounds,
-  } = requiredSampleSize(filteredMetrics.map((m) => m.totalTimeSec), confidenceLevel, errorPercent);
+  const sampleStats = requiredSampleSize(filteredMetrics.map((m) => m.totalTimeSec), confidenceLevel, errorPercent);
 
   // แก้ชื่อ Step รายแถว พร้อมยืนยัน 2 ชั้น (ยังคงมีไว้ให้แก้เองได้ในกรณีจำเป็น)
   const handleStepNameEdit = async (
@@ -324,415 +319,170 @@ function App() {
     };
   }, [report, selectedGroupName]);
 
-  const sidebar = (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <span className="sidebar-logo">MTS</span>
-        <span className="sidebar-title">Motion &amp; Time Study</span>
-      </div>
-      <nav className="sidebar-nav">
-        <a
-          className={`nav-item ${page === 'home' ? 'active' : ''}`}
-          href="#"
-          onClick={(e) => { e.preventDefault(); backToPicker(); }}
-        >
-          หน้าหลัก
-        </a>
-        <a
-          className={`nav-item ${page === 'learn' ? 'active' : ''}`}
-          href="#"
-          onClick={(e) => { e.preventDefault(); setPage('learn'); }}
-        >
-          การศึกษา
-        </a>
-        <a
-          className={`nav-item ${page === 'analysis' ? 'active' : ''}`}
-          href="#"
-          onClick={(e) => { e.preventDefault(); setPage('analysis'); }}
-        >
-          การวิเคราะห์
-        </a>
-        <a
-          className={`nav-item ${page === 'calc' ? 'active' : ''}`}
-          href="#"
-          onClick={(e) => { e.preventDefault(); setPage('calc'); }}
-        >
-          การคำนวณ
-        </a>
-        <a
-          className={`nav-item ${page === 'settings' ? 'active' : ''}`}
-          href="#"
-          onClick={(e) => { e.preventDefault(); setPage('settings'); }}
-        >
-          ตั้งค่า
-        </a>
-      </nav>
-    </aside>
-  );
+  const navigate = (next: Page) => (next === 'home' ? backToPicker() : setPage(next));
+  const layout = { page, onNavigate: navigate };
 
   if (page === 'learn') {
     return (
-      <div className="app-layout">
-        {sidebar}
-        <main className="main-content">
-          <LearnPage />
-        </main>
-      </div>
+      <AppLayout {...layout}>
+        <LearnPage />
+      </AppLayout>
     );
   }
 
   if (page === 'analysis') {
     return (
-      <div className="app-layout">
-        {sidebar}
-        <main className="main-content">
-          <AnalysisPage
-            studies={studies}
-            steps={rawSteps}
-            metrics={studyMetrics}
-            groups={groupOptions}
-            isLoading={isLoading}
-            cvStable={settings.cvStable}
-            cvWatch={settings.cvWatch}
-          />
-        </main>
-      </div>
+      <AppLayout {...layout}>
+        <AnalysisPage
+          studies={studies}
+          steps={rawSteps}
+          metrics={studyMetrics}
+          groups={groupOptions}
+          isLoading={isLoading}
+          cvStable={settings.cvStable}
+          cvWatch={settings.cvWatch}
+        />
+      </AppLayout>
     );
   }
 
   if (page === 'calc') {
     return (
-      <div className="app-layout">
-        {sidebar}
-        <main className="main-content">
-          <LineBalancePage
-            studies={studies}
-            metrics={studyMetrics}
-            groups={groupOptions}
-            isLoading={isLoading}
-            defaultShiftMinutes={settings.shiftMinutes}
-          />
-        </main>
-      </div>
+      <AppLayout {...layout}>
+        <LineBalancePage
+          studies={studies}
+          metrics={studyMetrics}
+          groups={groupOptions}
+          isLoading={isLoading}
+          defaultShiftMinutes={settings.shiftMinutes}
+        />
+      </AppLayout>
     );
   }
 
   if (page === 'settings') {
     return (
-      <div className="app-layout">
-        {sidebar}
-        <main className="main-content">
-          <SettingsPage
-            settings={settings}
-            onChange={updateSettings}
-            onReset={() => updateSettings(DEFAULT_SETTINGS)}
-            onRefresh={refreshAll}
-            counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
-          />
-        </main>
-      </div>
+      <AppLayout {...layout}>
+        <SettingsPage
+          settings={settings}
+          onChange={updateSettings}
+          onReset={() => updateSettings(DEFAULT_SETTINGS)}
+          onRefresh={refreshAll}
+          counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
+        />
+      </AppLayout>
     );
   }
 
   if (selectedGroupId === null) {
     return (
-      <div className="app-layout">
-        {sidebar}
-        <main className="main-content">
-          <div className="page-header">
-            <div>
-              <h1>เลือก Process</h1>
-              <p className="page-subtitle">เลือก Process ใหญ่ที่ต้องการดูข้อมูล</p>
-            </div>
-            <div className="header-actions">
-              <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <p className="empty-state">กำลังโหลดข้อมูล...</p>
-          ) : processCards.length === 0 ? (
-            <p className="empty-state">ยังไม่มี Process ในระบบ</p>
-          ) : (
-            <div className="process-grid">
-              {processCards.map((card) => (
-                <button key={card.id} className="process-card" onClick={() => setSelectedGroupId(card.id)}>
-                  <span className="process-card-name">{card.name}</span>
-                  {card.cycleCount === 0 ? (
-                    <span className="process-card-meta">ยังไม่มีข้อมูล</span>
-                  ) : (
-                    <>
-                      <span className="process-card-meta">
-                        {card.processCount} Process · {card.cycleCount} รอบ
-                      </span>
-                      {card.lastCreatedAt && (
-                        <span className="process-card-date">
-                          ล่าสุด {new Date(card.lastCreatedAt).toLocaleDateString('th-TH')}
-                        </span>
-                      )}
-                    </>
-                  )}
-                  <span className="process-card-arrow" aria-hidden="true">→</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </main>
-      </div>
+      <AppLayout {...layout}>
+        <ProcessPickerPage cards={processCards} isLoading={isLoading} onSelect={setSelectedGroupId} onRefresh={refreshAll} />
+      </AppLayout>
     );
   }
 
   return (
-    <div className="app-layout">
-      {sidebar}
-
-      <main className="main-content">
-        <div className="page-header">
-          <div>
-            <button className="back-link" onClick={backToPicker}>← เลือก Process อื่น</button>
-            <h1>{selectedGroupName}</h1>
-          </div>
-          <div className="header-actions">
-            <select
-              className="group-filter"
-              value={selectedGroupId}
-              onChange={(e) => { setSelectedGroupId(e.target.value); setExpandedId(null); }}
-              aria-label="เปลี่ยน Process"
-            >
-              {groupOptions.map((group) => (
-                <option key={group.id} value={group.id}>{group.name}</option>
-              ))}
-            </select>
-            <button className="btn" onClick={exportPdf} disabled={isExporting} title="รายงานสรุปของ Process นี้ (เลือก Save as PDF ในหน้าต่าง Print)">
-              รายงาน PDF
-            </button>
-            <button className="btn" onClick={exportExcel} disabled={isExporting} title="ตารางข้อมูลดิบทุกรอบ ทุก Step และ Defect">
-              Excel ข้อมูลดิบ
-            </button>
-            <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
-          </div>
+    <AppLayout
+      {...layout}
+      after={
+        report && (
+          <ProcessReport
+            groupName={selectedGroupName}
+            rows={report.rows}
+            generatedAt={report.generatedAt}
+            stepSummaries={buildStepSummaries(report.rows)}
+            sampleSize={{ confidence: confidenceLevel, errorPercent, required: sampleStats.required }}
+            cvStable={settings.cvStable}
+            cvWatch={settings.cvWatch}
+          />
+        )
+      }
+    >
+      <div className="page-header">
+        <div>
+          <button className="back-link" onClick={backToPicker}>← เลือก Process อื่น</button>
+          <h1>{selectedGroupName}</h1>
         </div>
-
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span className="kpi-label">การศึกษาทั้งหมด</span>
-            <span className="kpi-value">{totalStudyTypes} <small>Process</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">รอบทั้งหมด</span>
-            <span className="kpi-value">{totalCycles} <small>รอบ</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">เวลาเฉลี่ยต่อรอบ</span>
-            <span className="kpi-value">{avgCycleTime.toFixed(2)} <small>วินาที</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">ผู้ปฏิบัติงาน</span>
-            <span className="kpi-value">{totalOperators} <small>คน</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Standard Time เฉลี่ย</span>
-            <span className="kpi-value">{filteredAvgStandardTime.toFixed(2)} <small>วินาที</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">ประสิทธิภาพเฉลี่ย</span>
-            <span className="kpi-value">{filteredAvgEfficiency.toFixed(1)} <small>%</small></span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Man-hour ต่อหน่วย</span>
-            <span className="kpi-value">{filteredAvgManHour.toFixed(4)} <small>ชม./ชิ้น</small></span>
-          </div>
+        <div className="header-actions">
+          <select
+            className="group-filter"
+            value={selectedGroupId}
+            onChange={(e) => { setSelectedGroupId(e.target.value); setExpandedId(null); }}
+            aria-label="เปลี่ยน Process"
+          >
+            {groupOptions.map((group) => (
+              <option key={group.id} value={group.id}>{group.name}</option>
+            ))}
+          </select>
+          <button className="btn" onClick={exportPdf} disabled={isExporting} title="รายงานสรุปของ Process นี้ (เลือก Save as PDF ในหน้าต่าง Print)">
+            รายงาน PDF
+          </button>
+          <button className="btn" onClick={exportExcel} disabled={isExporting} title="ตารางข้อมูลดิบทุกรอบ ทุก Step และ Defect">
+            Excel ข้อมูลดิบ
+          </button>
+          <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
         </div>
+      </div>
 
-        {filteredMetrics.length > 0 && (
-          <div className="card chart-section">
-            <h2>แนวโน้มเวลารวมของแต่ละ Study</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={filteredMetrics.map((m) => ({ name: m.chartLabel, totalTime: m.totalTimeSec }))}
-                margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
-              >
-                <CartesianGrid stroke="#EEE7DC" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12, fill: '#7A6F63' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#E4DCCF' }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#7A6F63' }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'วินาที', angle: -90, position: 'insideLeft', fill: '#7A6F63', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{ borderRadius: 8, border: '1px solid #E4DCCF', fontFamily: 'inherit' }}
-                  formatter={(value) => [`${value} วินาที`, 'เวลารวม']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="totalTime"
-                  stroke="#A07C5B"
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: '#A07C5B', strokeWidth: 0 }}
-                  activeDot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        <div className="card sample-size-card">
-          <div className="sample-size-header">
-            <h2>จำนวนรอบที่ต้องจับเพิ่ม</h2>
-            <div className="sample-size-controls">
-              <label>
-                ความเชื่อมั่น
-                <select value={confidenceLevel} onChange={(e) => setConfidenceLevel(Number(e.target.value))}>
-                  <option value={90}>90%</option>
-                  <option value={95}>95%</option>
-                  <option value={99}>99%</option>
-                </select>
-              </label>
-              <label>
-                ค่าคลาดเคลื่อนที่ยอมรับ
-                <select value={errorPercent} onChange={(e) => setErrorPercent(Number(e.target.value))}>
-                  <option value={5}>5%</option>
-                  <option value={10}>10%</option>
-                  <option value={15}>15%</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          {sampleN < 2 ? (
-            <p className="sample-size-warning">ต้องมีข้อมูลอย่างน้อย 2 รอบ (ตอนนี้มี {sampleN} รอบ)</p>
-          ) : (
-            <div className="sample-size-stats">
-              <div className="stat-item">
-                <span className="stat-label">รอบที่จับแล้ว</span>
-                <span className="stat-value">{sampleN}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">ค่าเฉลี่ย</span>
-                <span className="stat-value">{sampleMean.toFixed(2)}s</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">ส่วนเบี่ยงเบนมาตรฐาน</span>
-                <span className="stat-value">{sampleStdDev.toFixed(2)}s</span>
-              </div>
-              <div className="stat-item highlight">
-                <span className="stat-label">รอบที่ควรมีทั้งหมด</span>
-                <span className="stat-value">{requiredNRounded}</span>
-              </div>
-              <div className={`stat-item ${remainingRounds === 0 ? 'success' : 'highlight'}`}>
-                <span className="stat-label">{remainingRounds === 0 ? 'สถานะ' : 'ต้องจับเพิ่มอีก'}</span>
-                <span className="stat-value">{remainingRounds === 0 ? '✓ เพียงพอแล้ว' : `${remainingRounds} รอบ`}</span>
-              </div>
-            </div>
-          )}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <span className="kpi-label">การศึกษาทั้งหมด</span>
+          <span className="kpi-value">{totalStudyTypes} <small>Process</small></span>
         </div>
+        <div className="kpi-card">
+          <span className="kpi-label">รอบทั้งหมด</span>
+          <span className="kpi-value">{totalCycles} <small>รอบ</small></span>
+        </div>
+        <div className="kpi-card">
+          <span className="kpi-label">เวลาเฉลี่ยต่อรอบ</span>
+          <span className="kpi-value">{avgCycleTime.toFixed(2)} <small>วินาที</small></span>
+        </div>
+        <div className="kpi-card">
+          <span className="kpi-label">ผู้ปฏิบัติงาน</span>
+          <span className="kpi-value">{totalOperators} <small>คน</small></span>
+        </div>
+        <div className="kpi-card">
+          <span className="kpi-label">Standard Time เฉลี่ย</span>
+          <span className="kpi-value">{filteredAvgStandardTime.toFixed(2)} <small>วินาที</small></span>
+        </div>
+        <div className="kpi-card">
+          <span className="kpi-label">ประสิทธิภาพเฉลี่ย</span>
+          <span className="kpi-value">{filteredAvgEfficiency.toFixed(1)} <small>%</small></span>
+        </div>
+        <div className="kpi-card">
+          <span className="kpi-label">Man-hour ต่อหน่วย</span>
+          <span className="kpi-value">{filteredAvgManHour.toFixed(4)} <small>ชม./ชิ้น</small></span>
+        </div>
+      </div>
 
-        <h2 className="section-title">รายการ Study</h2>
-        {isLoading ? (
-          <p className="empty-state">กำลังโหลดข้อมูล...</p>
-        ) : filteredStudies.length === 0 ? (
-          <p className="empty-state">Process นี้ยังไม่มีข้อมูล Study</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th></th><th>Process</th><th>ผู้ปฏิบัติงาน</th><th>วันที่ทำ</th><th>เสร็จสิ้นเมื่อ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudies.map((study) => {
-                const isExpanded = expandedId === study.id;
-                const steps = stepsCache[study.id] || [];
-                const defects = defectsCache[study.id] || [];
-                const totalTime = steps.reduce((sum, s) => sum + s.time_ms, 0);
-                return (
-                  <Fragment key={study.id}>
-                    <tr className="clickable-row" onClick={() => toggleExpand(study.id)}>
-                      <td>{isExpanded ? '▼' : '▶'}</td>
-                      <td>{study.process_name}</td>
-                      <td>{study.operator_name || '-'}</td>
-                      <td>{formatDate(study.created_at)}</td>
-                      <td>{study.finished_at ? formatDate(study.finished_at) : '-'}</td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={5} className="detail-cell">
-                          {isLoadingDetail && steps.length === 0 ? (
-                            <p>กำลังโหลดรายละเอียด...</p>
-                          ) : (
-                            <div className="detail-content">
-                              <h3>รายการ Step (แก้ชื่อได้ พิมพ์แล้วกด Enter)</h3>
-                              <table className="inner-table">
-                                <thead><tr><th>ชื่อ Step</th><th>เวลา (วินาที)</th></tr></thead>
-                                <tbody>
-                                  {steps.map((step) => (
-                                    <tr key={`${step.id}-${step.name}`}>
-                                      <td>
-                                        <input
-                                          className="step-name-edit"
-                                          defaultValue={step.name}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              (e.target as HTMLInputElement).blur();
-                                            }
-                                          }}
-                                          onBlur={(e) =>
-                                            handleStepNameEdit(step, e.target.value, study.id, e.target)
-                                          }
-                                        />
-                                      </td>
-                                      <td>{formatTime(step.time_ms)}s</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot>
-                                  <tr><td><strong>รวม (เวลาจริง)</strong></td><td><strong>{formatTime(totalTime)}s</strong></td></tr>
-                                </tfoot>
-                              </table>
-                              {steps.length > 0 && (
-                                <div className="standard-time-box">
-                                  <div><span className="std-label">Standard Time: </span><span className="std-value">{(calculateStandardTime(steps, study.allowance_percent) / 1000).toFixed(2)}s</span></div>
-                                  <div><span className="std-label">ประสิทธิภาพ: </span><span className="std-value">{calculateEfficiency(totalTime, calculateStandardTime(steps, study.allowance_percent)).toFixed(1)}%</span></div>
-                                  <div><span className="std-label">ผลิตได้: </span><span className="std-value">{study.quantity_produced || 1} ชิ้น</span></div>
-                                </div>
-                              )}
-                              <h3>Defect Log ({defects.length})</h3>
-                              {defects.length === 0 ? (
-                                <p className="no-defect">ไม่มี Defect เกิดขึ้น</p>
-                              ) : (
-                                <ul className="defect-list">
-                                  {defects.map((log) => (<li key={log.id}>{log.step_name} — {formatDate(log.occurred_at)}</li>))}
-                                </ul>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </main>
-      {report && (
-        <ProcessReport
-          groupName={selectedGroupName}
-          rows={report.rows}
-          generatedAt={report.generatedAt}
-          stepSummaries={buildStepSummaries(report.rows)}
-          sampleSize={{ confidence: confidenceLevel, errorPercent, required: requiredNRounded }}
-          cvStable={settings.cvStable}
-          cvWatch={settings.cvWatch}
+      {filteredMetrics.length > 0 && <CycleTimeChart metrics={filteredMetrics} />}
+
+      <SampleSizeCard
+        stats={sampleStats}
+        confidence={confidenceLevel}
+        errorPercent={errorPercent}
+        onConfidenceChange={setConfidenceLevel}
+        onErrorPercentChange={setErrorPercent}
+      />
+
+      <h2 className="section-title">รายการ Study</h2>
+      {isLoading ? (
+        <p className="empty-state">กำลังโหลดข้อมูล...</p>
+      ) : filteredStudies.length === 0 ? (
+        <p className="empty-state">Process นี้ยังไม่มีข้อมูล Study</p>
+      ) : (
+        <StudyTable
+          studies={filteredStudies}
+          expandedId={expandedId}
+          stepsCache={stepsCache}
+          defectsCache={defectsCache}
+          isLoadingDetail={isLoadingDetail}
+          onToggle={toggleExpand}
+          onStepRename={handleStepNameEdit}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }
 
