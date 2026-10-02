@@ -26,3 +26,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# สำรองข้อมูลจาก Supabase (มีข้อมูลจริง ห้าม commit)
+backups
