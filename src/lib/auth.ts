@@ -26,7 +26,18 @@ export const ROLE_HINTS: Record<OrgRole, string> = {
   viewer: 'ดูได้อย่างเดียว',
 };
 
-export const canEditData = (role: OrgRole) => role !== 'viewer';
+// โหมดทดลอง: ตั้ง VITE_SKIP_LOGIN=true ใน .env เพื่อเปิด Dashboard โดยไม่ต้อง Login
+// ใช้ได้เฉพาะตอนที่ Supabase ยังไม่ได้เปิด RLS (ยังไม่ได้รัน 20261002000003_enable_rls.sql) เพราะ anon จะอ่านข้อมูลไม่ได้
+export const SKIP_LOGIN = import.meta.env.VITE_SKIP_LOGIN === 'true';
+
+// VITE_ORG_ID ว่าง = ไม่กรองตามบริษัท (ใช้กับฐานข้อมูลที่ยังไม่มีคอลัมน์ organization_id)
+export const TEST_ORGANIZATION: Membership = {
+  id: import.meta.env.VITE_ORG_ID ?? '',
+  name: 'โหมดทดลอง (ไม่ได้ Login)',
+  role: 'owner',
+};
+
+export const canEditData =(role: OrgRole) => role !== 'viewer';
 export const canManageMembers = (role: OrgRole) => role === 'owner' || role === 'admin';
 
 // หลังกดลิงก์ในอีเมลหรือ Login ด้วย Google ให้กลับมาที่หน้านี้ (รองรับ GitHub Pages ที่อยู่ใต้ path ของ repo)

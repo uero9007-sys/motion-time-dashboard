@@ -26,11 +26,14 @@ import './App.css';
 
 type Props = {
   organization: Membership;
-  account: Account;
+  // ไม่มี = โหมดทดลองที่ไม่ได้ Login (ซ่อนหน้าสมาชิกและปุ่มออกจากระบบ)
+  account?: Account;
 };
 
 function App({ organization, account }: Props) {
   const orgId = organization.id;
+  // โหมดทดลองที่ไม่ได้ระบุ VITE_ORG_ID จะไม่กรองตามบริษัท
+  const orgFilter = orgId ? { organization_id: orgId } : {};
   const [settings, setSettings] = useState<DashboardSettings>(loadSettings);
   const [page, setPage] = useState<Page>(settings.startPage);
   const [studies, setStudies] = useState<Study[]>([]);
@@ -65,7 +68,7 @@ function App({ organization, account }: Props) {
     const { data, error } = await supabase
       .from('studies')
       .select('*')
-      .eq('organization_id', orgId)
+      .match(orgFilter)
       .order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching studies:', error);
@@ -79,7 +82,7 @@ function App({ organization, account }: Props) {
     const { data, error } = await supabase
       .from('process_groups')
       .select('*')
-      .eq('organization_id', orgId)
+      .match(orgFilter)
       .order('name', { ascending: true });
     if (error) {
       console.error('Error fetching process groups:', error);
@@ -92,11 +95,11 @@ function App({ organization, account }: Props) {
     const { data: studiesData, error: studiesError } = await supabase
       .from('studies')
       .select('*')
-      .eq('organization_id', orgId)
+      .match(orgFilter)
       .order('created_at', { ascending: true });
     if (studiesError || !studiesData) return;
 
-    const { data: allSteps, error: stepsError } = await supabase.from('steps').select('*').eq('organization_id', orgId);
+    const { data: allSteps, error: stepsError } = await supabase.from('steps').select('*').match(orgFilter);
     if (stepsError || !allSteps) return;
 
     setRawSteps(allSteps);
@@ -280,7 +283,7 @@ function App({ organization, account }: Props) {
     const { data: defects, error } = await supabase
       .from('defect_logs')
       .select('*')
-      .eq('organization_id', orgId)
+      .match(orgFilter)
       .in('study_id', filteredStudies.map((s) => s.id));
     if (error) {
       console.error('Error fetching defects:', error);
@@ -336,7 +339,7 @@ function App({ organization, account }: Props) {
   const navigate = (next: Page) => (next === 'home' ? backToPicker() : setPage(next));
   const layout = { page, onNavigate: navigate, organization, account };
 
-  if (page === 'members') {
+  if (page === 'members' && account) {
     return (
       <AppLayout {...layout}>
         <MembersPage organization={organization} account={account} />

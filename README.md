@@ -20,8 +20,19 @@ npm run dev            # เปิด http://localhost:5173
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` public key |
+| `VITE_SKIP_LOGIN` | ไม่บังคับ: `true` = โหมดทดลอง เปิด Dashboard โดยไม่ต้อง Login |
+| `VITE_ORG_ID` | ไม่บังคับ: id ของบริษัทที่จะแสดงในโหมดทดลอง (ว่าง = ไม่กรองตามบริษัท) |
 
 ถ้าไม่ได้ใส่ค่าเหล่านี้ หน้าเว็บจะแสดงข้อความแจ้งแทนการโหลดข้อมูล
+
+หลังแก้ `.env` ต้องหยุด dev server แล้วรัน `npm run dev` ใหม่ทุกครั้ง เพราะ Vite อ่านค่าตอนเริ่มเท่านั้น
+
+### โหมดทดลอง (ไม่ต้อง Login)
+
+ตั้ง `VITE_SKIP_LOGIN=true` แล้วแอปจะข้ามหน้า Login ไปเปิด Dashboard ทันที และซ่อนเมนู "สมาชิก" กับปุ่มออกจากระบบ
+
+โหมดนี้เข้าถึงฐานข้อมูลด้วย anon key จึงเห็นข้อมูลได้เฉพาะตอนที่ยังไม่ได้รัน `20261002000003_enable_rls.sql`
+ถ้ารันไปแล้ว Dashboard จะว่างเปล่า ต้องปิดโหมดนี้แล้ว Login ตามปกติ
 
 > ค่า `VITE_*` จะถูกฝังอยู่ในไฟล์ JavaScript ที่ส่งให้เบราว์เซอร์ ทุกคนที่เปิดเว็บจึงเห็น anon key ได้
 > ความปลอดภัยของข้อมูลจึงขึ้นอยู่กับ Row Level Security (RLS) ใน Supabase ห้ามใส่ `service_role` key ในไฟล์นี้

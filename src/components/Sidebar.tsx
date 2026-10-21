@@ -15,7 +15,8 @@ type Props = {
   page: Page;
   onNavigate: (page: Page) => void;
   organization: Membership;
-  account: Account;
+  // ไม่มี = โหมดทดลองที่ไม่ได้ Login
+  account?: Account;
 };
 
 export function Sidebar({ page, onNavigate, organization, account }: Props) {
@@ -26,7 +27,7 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
         <span className="sidebar-title">Motion &amp; Time Study</span>
       </div>
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter((item) => account || item.page !== 'members').map((item) => (
           <a
             key={item.page}
             className={`nav-item ${page === item.page ? 'active' : ''}`}
@@ -38,7 +39,7 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
         ))}
       </nav>
       <div className="sidebar-account">
-        {account.memberships.length > 1 ? (
+        {account && account.memberships.length > 1 ? (
           <select
             className="org-switcher"
             value={organization.id}
@@ -52,10 +53,14 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
         ) : (
           <span className="sidebar-org">{organization.name}</span>
         )}
-        <span className="sidebar-user" title={account.email}>
-          {account.email} · {ROLE_LABELS[organization.role]}
-        </span>
-        <button className="link-button" onClick={account.onSignOut}>ออกจากระบบ</button>
+        {account && (
+          <>
+            <span className="sidebar-user" title={account.email}>
+              {account.email} · {ROLE_LABELS[organization.role]}
+            </span>
+            <button className="link-button" onClick={account.onSignOut}>ออกจากระบบ</button>
+          </>
+        )}
       </div>
     </aside>
   );

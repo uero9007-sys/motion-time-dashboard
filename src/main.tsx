@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { SKIP_LOGIN, TEST_ORGANIZATION } from './lib/auth'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -15,6 +16,14 @@ if (missingEnv.length > 0) {
       <p>ดูวิธีตั้งค่าได้ใน README.md แล้วรีสตาร์ท dev server</p>
     </div>,
   )
+} else if (SKIP_LOGIN) {
+  import('./App.tsx').then(({ default: App }) => {
+    root.render(
+      <StrictMode>
+        <App organization={TEST_ORGANIZATION} />
+      </StrictMode>,
+    )
+  })
 } else {
   import('./components/AuthGate.tsx').then(({ default: AuthGate }) => {
     root.render(

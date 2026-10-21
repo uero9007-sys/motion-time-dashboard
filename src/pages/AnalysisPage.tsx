@@ -41,7 +41,7 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
     supabase
       .from('defect_logs')
       .select('*')
-      .eq('organization_id', organizationId)
+      .match(organizationId ? { organization_id: organizationId } : {})
       .then(({ data, error }) => {
         if (error) console.error('Error fetching defect logs:', error);
         else if (!cancelled && data) setDefects(data);
