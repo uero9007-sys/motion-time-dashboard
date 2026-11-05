@@ -4,9 +4,9 @@ import type { Session } from '@supabase/supabase-js';
 import App from '../App';
 import LoginPage from '../pages/LoginPage';
 import { supabase } from '../lib/supabase';
-import { authErrorMessage, loadSelectedOrgId, saveSelectedOrgId, type Membership, type OrgRole } from '../lib/auth';
+import { authErrorMessage, loadSelectedOrgId, MIN_PASSWORD_LENGTH, saveSelectedOrgId, type Membership, type OrgRole } from '../lib/auth';
 
-type MembershipState = { userId: string; list: Membership[] } | { userId: string; error: string };
+type MembershipState = { userId: string; list: Membership[]; fullName: string } | { userId: string; error: string };
 
 function AuthScreen({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -42,7 +42,7 @@ function SetNewPassword({ onDone }: { onDone: () => void }) {
       <form onSubmit={submit} className="auth-form">
         <label>
           รหัสผ่านใหม่
-          <input type="password" required minLength={6} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         {error && <p className="auth-message auth-error" role="alert">{error}</p>}
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่าน'}</button>
@@ -93,7 +93,11 @@ export default function AuthGate() {
       const list = (data as unknown as { role: OrgRole; organizations: { id: string; name: string } }[])
         .map((m) => ({ id: m.organizations.id, name: m.organizations.name, role: m.role }))
         .sort((a, b) => a.name.localeCompare(b.name, 'th'));
-      setMemberships({ userId, list });
+
+      // ชื่อที่แสดงใน Sidebar ไม่มีก็ไม่เป็นไร (เช่น ยังไม่ได้รัน migration ขั้นที่ 5) จึงไม่ถือเป็น error
+      const profile = await supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle();
+      if (cancelled) return;
+      setMemberships({ userId, list, fullName: profile.data?.full_name ?? '' });
     })();
     return () => {
       cancelled = true;
@@ -126,8 +130,8 @@ export default function AuthGate() {
     return (
       <AuthScreen title="ยังไม่มีสิทธิ์เข้าถึง">
         <p>
-          บัญชี <strong>{email}</strong> ยังไม่ได้เป็นสมาชิกของบริษัทใด ให้ผู้ดูแลบริษัทเชิญอีเมลนี้ในหน้า "สมาชิก"
-          แล้วกด "ตรวจสอบอีกครั้ง"
+          บัญชี <strong>{email}</strong> ยังไม่มีพื้นที่ทำงาน ถ้าเพิ่งสมัคร ให้กด "ตรวจสอบอีกครั้ง"
+          ถ้ายังขึ้นหน้านี้ ให้ผู้ดูแลบริษัทเชิญอีเมลนี้ในหน้า "สมาชิก"
         </p>
         <p className="auth-note">ถ้าได้รับเชิญด้วยอีเมลอื่น ให้ออกจากระบบแล้วเข้าใหม่ด้วยอีเมลนั้น</p>
         <div className="auth-actions">
@@ -151,6 +155,7 @@ export default function AuthGate() {
       organization={organization}
       account={{
         email,
+        fullName: current.fullName,
         memberships: current.list,
         onSwitchOrganization: switchOrganization,
         onSignOut: signOut,

@@ -55,6 +55,7 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
         )}
         {account && (
           <>
+            {account.fullName && <span className="sidebar-name">{account.fullName}</span>}
             <span className="sidebar-user" title={account.email}>
               {account.email} · {ROLE_LABELS[organization.role]}
             </span>

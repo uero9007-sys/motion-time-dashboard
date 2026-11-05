@@ -6,6 +6,8 @@ export type Membership = { id: string; name: string; role: OrgRole };
 // ข้อมูลบัญชีที่ Login อยู่ ส่งจาก AuthGate ลงไปให้ Sidebar และหน้าสมาชิก
 export type Account = {
   email: string;
+  // ชื่อจากตาราง profiles (ว่าง = ยังไม่ได้ตั้งชื่อ หรือยังไม่ได้รัน migration ขั้นที่ 5)
+  fullName: string;
   memberships: Membership[];
   onSwitchOrganization: (organizationId: string) => void;
   onSignOut: () => void;
@@ -61,16 +63,24 @@ export function saveSelectedOrgId(id: string) {
   }
 }
 
+// ต้องตรงกับ Minimum password length ใน Supabase → Authentication → Providers → Email
+export const MIN_PASSWORD_LENGTH = 8;
+
 // แปลข้อความ error ที่พบบ่อยจาก Supabase Auth เป็นภาษาไทย
 export function authErrorMessage(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid login credentials')) return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
   if (m.includes('email not confirmed')) return 'ยังไม่ได้ยืนยันอีเมล กรุณากดลิงก์ยืนยันในอีเมลก่อน';
   if (m.includes('user already registered')) return 'อีเมลนี้สมัครไว้แล้ว ลองเข้าสู่ระบบ หรือกด "ลืมรหัสผ่าน"';
-  if (m.includes('password should be') || m.includes('weak password')) return 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร';
+  if (m.includes('password should be') || m.includes('weak password')) return `รหัสผ่านต้องยาวอย่างน้อย ${MIN_PASSWORD_LENGTH} ตัวอักษร`;
   if (m.includes('rate limit') || m.includes('too many') || m.includes('for security purposes'))
     return 'ส่งคำขอบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
   if (m.includes('provider is not enabled')) return 'ยังไม่ได้เปิดใช้การเข้าสู่ระบบด้วยวิธีนี้ (ต้องตั้งค่าใน Supabase)';
   if (m.includes('signups not allowed')) return 'อีเมลนี้ยังไม่มีบัญชีในระบบ';
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed'))
+    return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบเน็ตแล้วลองใหม่';
+  if (m.includes('database error saving new user'))
+    return 'สมัครไม่สำเร็จ: ฐานข้อมูลยังไม่พร้อม (ผู้ดูแลต้องรัน migration ขั้นที่ 5 ก่อน)';
+  if (m.includes('unable to validate email') || m.includes('invalid email')) return 'รูปแบบอีเมลไม่ถูกต้อง';
   return message;
 }
