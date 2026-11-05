@@ -7,6 +7,15 @@
 
 begin;
 
+-- กันล็อกตัวเองออก: ถ้ายังไม่มี Owner ที่ Login แล้ว (มีแค่คำเชิญที่ยังไม่รับ) ให้หยุดทั้งไฟล์ ไม่มีอะไรถูกเปลี่ยน
+do $$
+begin
+  if not exists (select 1 from public.organization_members where role = 'owner') then
+    raise exception 'ยังไม่มี Owner ใน organization_members — Login ด้วยอีเมล Owner ใน Dashboard หรือแอปก่อน แล้วค่อยรันไฟล์นี้';
+  end if;
+end;
+$$;
+
 -- ลบ policy เดิมของ 4 ตาราง (เช่น policy ที่เปิดให้ anon อ่าน/เขียนได้ทั้งหมด) แล้วใช้ชุดใหม่แทน
 do $$
 declare
