@@ -14,10 +14,12 @@ const spaFallback = (): Plugin => ({
 })
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), spaFallback()],
-  // ใช้ path แบบ relative เพื่อให้เปิดได้ทั้งบน Vercel และ GitHub Pages (https://<user>.github.io/<repo>/)
-  base: './',
+  // build: path เต็มของ GitHub Pages (https://uero9007-sys.github.io/motion-time-dashboard/)
+  // ห้ามใช้ './' เพราะเปิด /join/ (มี / ต่อท้าย) แล้วไฟล์ JS ถูกหาที่ /join/assets/ → 404 หน้าขาว
+  // dev (npm run dev): '/' เหมือนเดิม  ·  npm run serve / preview: เปิดที่ http://<เครื่อง>:4173/motion-time-dashboard/
+  base: command === 'build' ? '/motion-time-dashboard/' : '/',
   // ใช้เครื่องตัวเองเป็น Server ฉุกเฉิน: อนุญาตให้เปิดผ่าน Cloudflare Tunnel ได้
   server: { allowedHosts: ['.trycloudflare.com'] },
   preview: { allowedHosts: ['.trycloudflare.com'] },
@@ -31,4 +33,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

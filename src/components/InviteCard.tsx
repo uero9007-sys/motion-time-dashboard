@@ -46,6 +46,16 @@ export default function InviteCard({ organization }: { organization: Membership 
     load();
   }, [load]);
 
+  // กด Esc ปิด Modal ยืนยัน (ยกเว้นระหว่างกำลังสร้างรหัส)
+  useEffect(() => {
+    if (!confirmRotate) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !rotating) setConfirmRotate(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [confirmRotate, rotating]);
+
   const copy = async (text: string, what: 'code' | 'link') => {
     try {
       await navigator.clipboard.writeText(text);

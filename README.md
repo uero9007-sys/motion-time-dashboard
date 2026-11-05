@@ -83,7 +83,10 @@ src/
 
 ## Deploy
 
-`vite.config.ts` ตั้ง `base: './'` ไว้ ไฟล์ที่ build ออกมาจึงเปิดได้ทั้งบน Vercel และ GitHub Pages
+เว็บจริงอยู่ที่ https://uero9007-sys.github.io/motion-time-dashboard/ (GitHub Pages)
 
-- **Vercel**: โปรเจกต์เชื่อมไว้แล้ว (`.vercel/`) ต้องตั้งค่า `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY` ใน Environment Variables ของ Vercel ด้วย
-- **GitHub Pages**: `npm run deploy` จะใช้ค่าจาก `.env` ในเครื่องตอน build
+- `npm run deploy` build แล้วขึ้น branch `gh-pages` ใช้ค่าจาก `.env` ในเครื่องตอน build (ห้ามตั้ง `VITE_SKIP_LOGIN=true`)
+- `vite.config.ts` ตั้ง `base` เป็น `/motion-time-dashboard/` ตอน build และคัดลอก `index.html` เป็น `404.html` ให้ลิงก์ `/join?code=...` ของ QR เชิญเปิดได้
+- deploy แบบเพิ่มไฟล์ (`-a`) เพื่อไม่ลบแอปมือถือเวอร์ชันเว็บที่ `/app` (deploy จากโปรเจกต์แอปด้วย `npm run deploy:web`)
+- `public/.nojekyll` ปิด Jekyll ของ GitHub Pages ไม่งั้นโฟลเดอร์ `_expo/` ของแอปเว็บจะเปิดไม่ได้
+
