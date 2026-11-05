@@ -26,7 +26,7 @@ const FONT_SCALES: { value: FontScale; label: string }[] = [
 const START_PAGES: { value: Page; label: string }[] = [
   { value: 'home', label: 'หน้าหลัก (เลือก Process)' },
   { value: 'analysis', label: 'การวิเคราะห์' },
-  { value: 'calc', label: 'การคำนวณ (Line Balancing)' },
+  { value: 'calc', label: 'Line Balancing' },
   { value: 'learn', label: 'การศึกษา' },
 ];
 
@@ -69,7 +69,10 @@ export default function SettingsPage({ settings, onChange, onReset, onRefresh, c
   const clearLineBalance = () => {
     if (!window.confirm('ล้างไลน์ที่จัดไว้ในหน้า "การคำนวณ" หรือไม่?')) return;
     try {
-      localStorage.removeItem(LINE_BALANCE_STORAGE_KEY);
+      // ผังแยกตามทีม (คีย์ขึ้นต้นด้วย LINE_BALANCE_STORAGE_KEY) ลบทุกทีม; ผังที่ตั้งชื่อบันทึกไว้ไม่ถูกลบ
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(LINE_BALANCE_STORAGE_KEY))
+        .forEach((k) => localStorage.removeItem(k));
     } catch {
       // ไม่มีสิทธิ์เข้าถึง storage — ไม่มีอะไรให้ล้าง
     }

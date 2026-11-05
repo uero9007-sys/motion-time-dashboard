@@ -2029,3 +2029,387 @@ section[id] {
 .join-app-links a {
   color: var(--color-accent-dark);
 }
+
+/* ---------- Line Balancing (ระดับ Process) ---------- */
+.lb-settings-grid,
+.lb-rules,
+.lb-whatif {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-end;
+}
+
+.lb-settings-grid label,
+.lb-rules label,
+.lb-whatif label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.lb-settings-grid select,
+.lb-settings-grid input,
+.lb-rules input,
+.lb-whatif input,
+.lb-whatif select,
+.lb-card-move {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.lb-settings-grid input,
+.lb-rules input {
+  width: 120px;
+}
+
+.lb-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lb-range input {
+  width: 72px;
+}
+
+.lb-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.lb-note {
+  margin: -8px 0 20px;
+}
+
+.lb-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.lb-section-head h2 {
+  margin: 0;
+}
+
+.lb-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lb-library {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+}
+
+.lb-library.is-over,
+.lb-station.is-over {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-tint);
+}
+
+.lb-line {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.lb-station {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.lb-station.is-bottleneck {
+  border-color: var(--color-danger);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+.lb-station.is-empty {
+  border-style: dashed;
+}
+
+.lb-station-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lb-station-head .link-button {
+  margin-left: auto;
+}
+
+.lb-bar {
+  position: relative;
+  height: 120px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.lb-bar-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-accent);
+}
+
+.lb-station.is-bottleneck .lb-bar-fill {
+  background-color: var(--color-danger);
+}
+
+.lb-bar-takt,
+.lb-bar-ct {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+}
+
+.lb-bar-takt {
+  border-top: 2px dashed var(--color-success);
+}
+
+.lb-bar-ct {
+  border-top: 2px solid var(--color-text);
+}
+
+.lb-legend {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin: 0 4px 3px 8px;
+  vertical-align: middle;
+}
+
+.lb-legend-takt {
+  border-top: 2px dashed var(--color-success);
+}
+
+.lb-legend-ct {
+  border-top: 2px solid var(--color-text);
+}
+
+.lb-station-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-station-time small {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.lb-station-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 60px;
+}
+
+.lb-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.lb-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 6px;
+  width: 220px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  touch-action: manipulation;
+}
+
+.lb-card.is-compact {
+  width: auto;
+}
+
+.lb-card.is-dragging {
+  position: relative;
+  z-index: 40;
+  box-shadow: 0 8px 24px rgba(46, 41, 37, 0.18);
+  opacity: 0.95;
+}
+
+.lb-card.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.lb-card-handle {
+  grid-row: span 2;
+  width: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 16px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.lb-card-handle:focus-visible,
+.lb-card-body:focus-visible,
+.lb-card-move:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.lb-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lb-card-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.lb-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-card-move {
+  height: 30px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.lb-kpi-good .kpi-value {
+  color: var(--color-success);
+}
+
+.lb-kpi-bad .kpi-value {
+  color: var(--color-danger);
+}
+
+.lb-row-bottleneck td {
+  background-color: var(--color-danger-tint);
+}
+
+.lb-muted {
+  color: var(--color-text-muted);
+}
+
+.lb-warning-card {
+  border-color: var(--color-accent);
+}
+
+.lb-warnings {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.lb-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.lb-charts h3,
+.card h3 {
+  margin: 12px 0 8px;
+  font-size: 15px;
+}
+
+.lb-suggestions {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lb-suggestions p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lb-label {
+  font-weight: 600;
+}
+
+.lb-disclaimer {
+  font-size: 13px;
+  color: var(--color-accent-dark);
+}
+
+.lb-kanban-result {
+  margin: 14px 0 4px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-limitations {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  font-size: 14px;
+}
+
+.lb-limitations ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.lb-row-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}

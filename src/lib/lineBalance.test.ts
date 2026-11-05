@@ -338,3 +338,38 @@ describe('compareLines — เปรียบเทียบผังก่อ�
     expect(stations.diff).toBe(-1);
   });
 });
+
+describe('buildLineBalanceSheets — Export Excel มีเงื่อนไขกำกับเสมอ', async () => {
+  const { buildLineBalanceSheets } = await import('./lineBalanceExport');
+  const { map, stations } = lineOf([30, 40, 20]);
+  const line = balanceLine(stations, map, 48, 28800);
+  const procs = new Map(
+    [...map.keys()].map((k) => [k, { key: k, name: `งาน ${k}`, rounds: [], n: 5, meanSec: map.get(k)!, sdSec: 1, requiredRounds: 8, enoughData: false, duplicateStepRounds: 0, abnormalRatingSteps: 0 }])
+  );
+  const sheets = buildLineBalanceSheets(line, procs, [], {
+    layoutName: 'ก่อนปรับปรุง',
+    basis: 'observed',
+    lastN: 10,
+    takt: 48,
+    taktSource: '480 นาที/กะ ÷ 600 ชิ้น/กะ',
+    usedRounds: 15,
+    excludedRounds: 2,
+    exportedAt: 'x',
+  });
+  it('มีครบ 4 ชีต', () => expect(Object.keys(sheets)).toEqual(['ตัวชี้วัด', 'สถานี', 'ข้อเสนอแนะ', 'เงื่อนไข']));
+  it('ตัวชี้วัดตรงกับผลคำนวณ', () => {
+    const row = (label: string) => sheets['ตัวชี้วัด'].find((r) => r[0] === label)!;
+    expect(row('Cycle Time ของสาย (CT)')[1]).toBe(40);
+    expect(row('Line Balance Efficiency')[1]).toBe(75);
+    expect(row('ผ่าน Takt')[1]).toBe('ผ่าน');
+  });
+  it('สถานีมีชื่อ Process และจำนวนรอบ / ที่ควรมี', () => {
+    expect(sheets['สถานี'][2]).toEqual(['สถานี 2', 'งาน p1', 40, 0, 83.33, 'ใช่', '5/8']);
+  });
+  it('เงื่อนไขบอกที่มาของตัวเลข', () => {
+    const cond = Object.fromEntries(sheets['เงื่อนไข'].slice(1));
+    expect(cond['เวลาที่ใช้']).toContain('observed');
+    expect(cond['จำนวนรอบ']).toContain('10 รอบล่าสุด');
+    expect(cond['รอบที่ตัดทิ้ง (ไม่มี Step / เวลา 0)']).toBe(2);
+  });
+});

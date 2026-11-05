@@ -17,7 +17,7 @@ import {
 import type { DefectLog, Page, ProcessGroup, Step, Study, StudyMetric } from './types';
 import LearnPage from './pages/LearnPage';
 import AnalysisPage from './pages/AnalysisPage';
-import LineBalancePage from './pages/LineBalancePage';
+import LineBalancingPage from './pages/LineBalancingPage';
 import SettingsPage from './pages/SettingsPage';
 import MembersPage from './pages/MembersPage';
 import { canEditData, type Account, type Membership } from './lib/auth';
@@ -375,13 +375,7 @@ function App({ organization, account }: Props) {
   if (page === 'calc') {
     return (
       <AppLayout {...layout}>
-        <LineBalancePage
-          studies={studies}
-          metrics={studyMetrics}
-          groups={groupOptions}
-          isLoading={isLoading}
-          defaultShiftMinutes={settings.shiftMinutes}
-        />
+        <LineBalancingPage organizationId={orgId} defaultShiftMinutes={settings.shiftMinutes} />
       </AppLayout>
     );
   }

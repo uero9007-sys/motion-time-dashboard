@@ -24,7 +24,8 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 };
 
 const STORAGE_KEY = 'mts-dashboard-settings';
-export const LINE_BALANCE_STORAGE_KEY = 'mts-line-balance';
+// ผังที่กำลังจัดในหน้า Line Balancing (ต่อท้ายด้วย :<id ทีม>) เลขเวอร์ชันเผื่อเปลี่ยนรูปแบบข้อมูลภายหลัง
+export const LINE_BALANCE_STORAGE_KEY = 'mts-line-balancing-v1';
 
 export function loadSettings(): DashboardSettings {
   try {

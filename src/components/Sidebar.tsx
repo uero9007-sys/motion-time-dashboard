@@ -6,7 +6,7 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'home', label: 'หน้าหลัก' },
   { page: 'learn', label: 'การศึกษา' },
   { page: 'analysis', label: 'การวิเคราะห์' },
-  { page: 'calc', label: 'การคำนวณ' },
+  { page: 'calc', label: 'Line Balancing' },
   { page: 'members', label: 'สมาชิก' },
   { page: 'settings', label: 'ตั้งค่า' },
 ];
