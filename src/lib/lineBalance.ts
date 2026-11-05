@@ -110,7 +110,10 @@ export function summarizeProcesses(
       }
       const key = processKeyOf(study);
       const entry = acc.get(key) ?? {
-        name: (study.process_group_id && groupName.get(study.process_group_id)) || study.process_name || 'ไม่ระบุชื่อ',
+        // รอบที่ไม่ได้ผูก Process ใหญ่ ใช้ชื่อ process_name และบอกกำกับ ไม่งั้นชื่อซ้ำกับ Process ใหญ่ที่ชื่อเหมือนกันจนแยกไม่ออก
+        name: study.process_group_id
+          ? groupName.get(study.process_group_id)?.trim() || study.process_name.trim() || 'ไม่ระบุชื่อ'
+          : `${study.process_name.trim() || 'ไม่ระบุชื่อ'} (ไม่ระบุ Process ใหญ่)`,
         rounds: [],
         dup: 0,
         abnormal: 0,

@@ -373,3 +373,11 @@ describe('buildLineBalanceSheets — Export Excel มีเงื่อนไข
     expect(cond['รอบที่ตัดทิ้ง (ไม่มี Step / เวลา 0)']).toBe(2);
   });
 });
+
+describe('ชื่อ Process ที่ไม่ได้ผูก Process ใหญ่', () => {
+  it('ต่อท้าย "(ไม่ระบุ Process ใหญ่)" และตัดช่องว่าง กันชื่อซ้ำกับ Process ใหญ่', () => {
+    const s = [study('a', 'g1', '2026-01-01'), { ...study('b', null, '2026-01-02'), process_name: 'ประกอบ ' }];
+    const r = summarizeProcesses(s, [st('a', 'X', 5), st('b', 'X', 6)], [{ id: 'g1', name: 'ประกอบ' }]);
+    expect(r.processes.map((p) => p.name).sort()).toEqual(['ประกอบ', 'ประกอบ (ไม่ระบุ Process ใหญ่)']);
+  });
+});

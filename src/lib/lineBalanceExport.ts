@@ -30,7 +30,8 @@ export function buildLineBalanceSheets(
       r2(s.idleSec),
       r2(s.utilizationVsTakt),
       s.isBottleneck ? 'ใช่' : '',
-      s.processKeys.map((k) => `${processes.get(k)?.n ?? 0}/${processes.get(k)?.requiredRounds ?? 0}`).join(', '),
+      // มีไม่ถึง 2 รอบ สูตร Sample Size คำนวณไม่ได้ (required = 0) แสดง — แทน 0 กันเข้าใจผิดว่าไม่ต้องจับเพิ่ม
+      s.processKeys.map((k) => `${processes.get(k)?.n ?? 0}/${processes.get(k)?.requiredRounds || '—'}`).join(', '),
     ]),
   ];
 
