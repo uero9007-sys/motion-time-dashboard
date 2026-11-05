@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_SETTINGS, LINE_BALANCE_STORAGE_KEY, type DashboardSettings, type FontScale } from '../lib/settings';
 import type { Page } from '../types';
+import type { Membership } from '../lib/auth';
+import InviteCard from '../components/InviteCard';
 
 type Props = {
   settings: DashboardSettings;
@@ -9,6 +11,8 @@ type Props = {
   onReset: () => void;
   onRefresh: () => void;
   counts: { groups: number; studies: number; steps: number };
+  // ไม่มี = โหมดทดลองที่ไม่ได้ Login (ไม่มีองค์กรจริงให้เชิญ)
+  organization?: Membership;
 };
 
 type Connection = { status: 'idle' | 'checking' | 'ok' | 'error'; message?: string };
@@ -46,7 +50,7 @@ function SettingRow({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-export default function SettingsPage({ settings, onChange, onReset, onRefresh, counts }: Props) {
+export default function SettingsPage({ settings, onChange, onReset, onRefresh, counts, organization }: Props) {
   const [connection, setConnection] = useState<Connection>({ status: 'idle' });
   const [lineCleared, setLineCleared] = useState(false);
 
@@ -86,6 +90,8 @@ export default function SettingsPage({ settings, onChange, onReset, onRefresh, c
           <p className="page-subtitle">การตั้งค่าจะบันทึกไว้ในเบราว์เซอร์นี้ และใช้ทันที</p>
         </div>
       </div>
+
+      {organization && <InviteCard organization={organization} />}
 
       <section className="card settings-card">
         <h2>ค่าเริ่มต้นการคำนวณ</h2>

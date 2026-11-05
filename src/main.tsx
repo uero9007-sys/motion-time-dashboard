@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { SKIP_LOGIN, TEST_ORGANIZATION } from './lib/auth'
+import { isJoinPath } from './lib/invite'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -16,6 +17,15 @@ if (missingEnv.length > 0) {
       <p>ดูวิธีตั้งค่าได้ใน README.md แล้วรีสตาร์ท dev server</p>
     </div>,
   )
+} else if (isJoinPath(window.location.pathname)) {
+  // ปลายทางของ QR เชิญเข้าทีม เปิดได้โดยไม่ต้อง Login
+  import('./pages/JoinPage.tsx').then(({ default: JoinPage }) => {
+    root.render(
+      <StrictMode>
+        <JoinPage />
+      </StrictMode>,
+    )
+  })
 } else if (SKIP_LOGIN) {
   import('./App.tsx').then(({ default: App }) => {
     root.render(

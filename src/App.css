@@ -1850,3 +1850,172 @@ section[id] {
     display: none;
   }
 }
+
+/* ---------- Invite (QR) ---------- */
+.invite-intro {
+  margin: 4px 0 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.invite-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.invite-qr {
+  width: 240px;
+  height: 240px;
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: #fff;
+}
+
+.invite-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.invite-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.invite-code {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+}
+
+.invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.invite-actions a.btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.invite-hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.invite-members-title {
+  margin: 8px 0;
+  font-size: 15px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(46, 41, 37, 0.45);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+}
+
+.modal p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---------- หน้า /join (เปิดได้โดยไม่ต้อง Login) ---------- */
+.join-steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.join-code-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-accent-tint);
+}
+
+.join-web-button {
+  width: 100%;
+}
+
+.join-or-create {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0 8px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--color-border);
+}
+
+/* แจ้งผลการเข้าร่วมทีมจากลิงก์ /join หลัง Login */
+.join-toast {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(46, 41, 37, 0.12);
+}

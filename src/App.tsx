@@ -395,6 +395,7 @@ function App({ organization, account }: Props) {
           onReset={() => updateSettings(DEFAULT_SETTINGS)}
           onRefresh={refreshAll}
           counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
+          organization={account ? organization : undefined}
         />
       </AppLayout>
     );

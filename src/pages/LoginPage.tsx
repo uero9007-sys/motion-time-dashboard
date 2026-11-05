@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { authErrorMessage, authRedirectUrl, MIN_PASSWORD_LENGTH } from '../lib/auth';
+import { formatInviteCode, INVITE_CODE_LENGTH, normalizeInviteCode, peekPendingInvite } from '../lib/invite';
 
 type Mode = 'password' | 'signup' | 'magic' | 'forgot';
-type Workspace = 'personal' | 'company';
+type Workspace = 'personal' | 'company' | 'join';
 
 type Status = { kind: 'idle' | 'busy' } | { kind: 'error' | 'sent'; message: string };
 
@@ -15,13 +16,16 @@ const TITLES: Record<Mode, string> = {
 };
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>('password');
+  // มาจากหน้า /join (QR เชิญ) → เปิดแท็บสมัครพร้อมเลือก "เข้าร่วมด้วยรหัสเชิญ" และเติมรหัสให้
+  const [pendingCode] = useState(peekPendingInvite);
+  const [mode, setMode] = useState<Mode>(pendingCode ? 'signup' : 'password');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [workspace, setWorkspace] = useState<Workspace>('personal');
+  const [workspace, setWorkspace] = useState<Workspace>(pendingCode ? 'join' : 'personal');
   const [companyName, setCompanyName] = useState('');
+  const [inviteCode, setInviteCode] = useState(pendingCode ? formatInviteCode(pendingCode) : '');
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
   const switchMode = (next: Mode) => {
@@ -41,6 +45,8 @@ export default function LoginPage() {
       if (password.length < MIN_PASSWORD_LENGTH) return fail(`รหัสผ่านต้องยาวอย่างน้อย ${MIN_PASSWORD_LENGTH} ตัวอักษร`);
       if (password !== confirmPassword) return fail('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
       if (workspace === 'company' && !companyName.trim()) return fail('กรุณากรอกชื่อบริษัท');
+      if (workspace === 'join' && normalizeInviteCode(inviteCode).length !== INVITE_CODE_LENGTH)
+        return fail(`รหัสเชิญต้องมี ${INVITE_CODE_LENGTH} ตัวอักษร (เช่น ABCDE-FGHJK)`);
     }
 
     setStatus({ kind: 'busy' });
@@ -63,6 +69,8 @@ export default function LoginPage() {
             full_name: fullName.trim(),
             workspace_type: workspace,
             company_name: workspace === 'company' ? companyName.trim() : '',
+            // trigger ตรวจรหัสฝั่งเซิร์ฟเวอร์: ถูก → เข้าทีมนั้น, ผิด → ได้พื้นที่ส่วนตัว (แล้วกรอกรหัสใหม่ได้ในหน้าตั้งค่า)
+            invite_code: workspace === 'join' ? normalizeInviteCode(inviteCode) : '',
           },
         },
       });
@@ -165,7 +173,14 @@ export default function LoginPage() {
                   <input type="radio" name="workspace" id="ws-company" checked={workspace === 'company'} onChange={() => setWorkspace('company')} />
                   <span>
                     <b>สร้างบริษัท (Co-work)</b>
-                    <small>เชิญเพื่อนร่วมงานเข้ามาดูและบันทึกข้อมูลร่วมกันได้ในหน้า "สมาชิก"</small>
+                    <small>เชิญเพื่อนร่วมงานด้วย QR Code ในหน้า "ตั้งค่า"</small>
+                  </span>
+                </label>
+                <label className="auth-choice-option">
+                  <input type="radio" name="workspace" id="ws-join" checked={workspace === 'join'} onChange={() => setWorkspace('join')} />
+                  <span>
+                    <b>เข้าร่วมทีมด้วยรหัสเชิญ</b>
+                    <small>กรอกรหัสที่ได้จากเจ้าของทีม หรือเปิดลิงก์จาก QR</small>
                   </span>
                 </label>
               </fieldset>
@@ -174,6 +189,20 @@ export default function LoginPage() {
                 <label>
                   ชื่อบริษัท / ทีม
                   <input id="signup-company" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                </label>
+              )}
+              {workspace === 'join' && (
+                <label>
+                  รหัสเชิญ
+                  <input
+                    id="signup-invite"
+                    required
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    placeholder="ABCDE-FGHJK"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                  />
                 </label>
               )}
             </>
@@ -201,7 +230,7 @@ export default function LoginPage() {
 
         <p className="auth-note">
           {isSignup
-            ? 'ถ้าถูกเชิญเข้าบริษัทไว้แล้ว ให้สมัครด้วยอีเมลที่ได้รับเชิญ ระบบจะพาเข้าบริษัทนั้นให้อัตโนมัติ'
+            ? 'มีรหัสเชิญจาก QR? เลือก "เข้าร่วมทีมด้วยรหัสเชิญ" ด้านบน หรือถ้าถูกเชิญทางอีเมล ให้สมัครด้วยอีเมลนั้น'
             : 'บัญชีเดียวกันใช้ได้ทั้ง Dashboard และแอปมือถือ'}
         </p>
       </div>
