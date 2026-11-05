@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "serve": "npm run build && vite preview --host --port 4173",
-    "deploy": "npm run build && gh-pages -d dist",
+    "deploy": "npm run build && gh-pages -d dist -a -t",
     "test": "vitest run"
   },
   "dependencies": {

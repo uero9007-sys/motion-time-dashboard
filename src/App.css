@@ -2019,3 +2019,13 @@ section[id] {
   font-size: 14px;
   box-shadow: 0 4px 16px rgba(46, 41, 37, 0.12);
 }
+
+.join-app-links {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.join-app-links a {
+  color: var(--color-accent-dark);
+}
