@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
+import { fetchAllRows } from './lib/fetchAll';
 import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
 import ProcessReport from './components/ProcessReport';
 import { AppLayout } from './components/Sidebar';
@@ -33,7 +34,7 @@ type Props = {
 function App({ organization, account }: Props) {
   const orgId = organization.id;
   // โหมดทดลองที่ไม่ได้ระบุ VITE_ORG_ID จะไม่กรองตามบริษัท
-  const orgFilter = orgId ? { organization_id: orgId } : {};
+  const orgFilter: Record<string, string> = orgId ? { organization_id: orgId } : {};
   const [settings, setSettings] = useState<DashboardSettings>(loadSettings);
   const [page, setPage] = useState<Page>(settings.startPage);
   const [studies, setStudies] = useState<Study[]>([]);
@@ -64,19 +65,7 @@ function App({ organization, account }: Props) {
   }, [settings.fontScale]);
   const [rawSteps, setRawSteps] = useState<Step[]>([]);
 
-  const fetchStudies = async () => {
-    const { data, error } = await supabase
-      .from('studies')
-      .select('*')
-      .match(orgFilter)
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('Error fetching studies:', error);
-    } else {
-      setStudies(data);
-    }
-    setIsLoading(false);
-  };
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchProcessGroups = async () => {
     const { data, error } = await supabase
@@ -91,22 +80,39 @@ function App({ organization, account }: Props) {
     }
   };
 
-  const fetchChartData = async () => {
-    const { data: studiesData, error: studiesError } = await supabase
-      .from('studies')
-      .select('*')
-      .match(orgFilter)
-      .order('created_at', { ascending: true });
-    if (studiesError || !studiesData) return;
+  // โหลด Study และ Step ทั้งหมดทีละหน้า (Supabase ตัดที่ 1,000 แถวต่อคำขอโดยไม่แจ้ง error
+  // ถ้าไม่แบ่งหน้า เกินราว 100 รอบ Step จะหายไปบางส่วน KPI / กราฟ / Export ผิดทั้งหมด)
+  const loadData = async () => {
+    const [studiesResult, stepsResult] = await Promise.all([
+      fetchAllRows<Study>('studies', '*', orgFilter),
+      fetchAllRows<Step>('steps', '*', orgFilter),
+    ]);
+    const error = studiesResult.error ?? stepsResult.error;
+    if (error) {
+      console.error('Error loading studies/steps:', error);
+      setLoadError(error);
+      setIsLoading(false);
+      return;
+    }
+    setLoadError(null);
 
-    const { data: allSteps, error: stepsError } = await supabase.from('steps').select('*').match(orgFilter);
-    if (stepsError || !allSteps) return;
-
+    const studiesAsc = [...studiesResult.data].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const allSteps = stepsResult.data;
+    setStudies([...studiesAsc].reverse());
     setRawSteps(allSteps);
 
+    const stepsByStudy = new Map<string, Step[]>();
+    allSteps.forEach((s) => {
+      const list = stepsByStudy.get(s.study_id);
+      if (list) list.push(s);
+      else stepsByStudy.set(s.study_id, [s]);
+    });
+
     const metrics: StudyMetric[] = [];
-    studiesData.forEach((study) => {
-      const stepsOfThisStudy = allSteps.filter((s) => s.study_id === study.id);
+    studiesAsc.forEach((study) => {
+      const stepsOfThisStudy = stepsByStudy.get(study.id) ?? [];
+      // รอบที่ไม่มี Step (ส่งไม่ครบ) ไม่นับเป็นรอบเวลา 0 วินาที ไม่งั้นค่าเฉลี่ยและ Sample Size เพี้ยน
+      if (stepsOfThisStudy.length === 0) return;
       const totalMs = stepsOfThisStudy.reduce((sum, s) => sum + s.time_ms, 0);
       const dateLabel = new Date(study.created_at).toLocaleDateString('th-TH', {
         day: '2-digit',
@@ -114,12 +120,8 @@ function App({ organization, account }: Props) {
       });
       const chartLabel = `${study.process_name} (${dateLabel})`;
 
-      let standardTimeMs = 0;
-      let efficiency = 0;
-      if (stepsOfThisStudy.length > 0) {
-        standardTimeMs = calculateStandardTime(stepsOfThisStudy, study.allowance_percent);
-        efficiency = calculateEfficiency(totalMs, standardTimeMs);
-      }
+      const standardTimeMs = calculateStandardTime(stepsOfThisStudy, study.allowance_percent);
+      const efficiency = calculateEfficiency(totalMs, standardTimeMs);
 
       const qty = study.quantity_produced || 1;
       const manHourPerUnit = (totalMs / 1000 / 3600) / qty;
@@ -137,13 +139,13 @@ function App({ organization, account }: Props) {
     });
 
     setStudyMetrics(metrics);
+    setIsLoading(false);
   };
 
   useEffect(() => {
     // setState ใน fetch* เกิดหลัง await เท่านั้น จึงไม่ใช่ synchronous setState
     // oxlint-disable-next-line react/set-state-in-effect
-    fetchStudies();
-    fetchChartData();
+    loadData();
     fetchProcessGroups();
     // โหลดครั้งเดียวต่อบริษัท: AuthGate ใส่ key={organization.id} ทำให้ App เริ่มใหม่เมื่อสลับบริษัทอยู่แล้ว
     // oxlint-disable-next-line react-hooks/exhaustive-deps
@@ -250,7 +252,7 @@ function App({ organization, account }: Props) {
       const { error } = await supabase.from('steps').update({ name: trimmed }).eq('id', step.id);
       if (error) throw error;
 
-      await fetchChartData();
+      await loadData();
       await loadStepsForStudy(studyId);
     } catch (err) {
       console.error('Error renaming step:', err);
@@ -263,8 +265,7 @@ function App({ organization, account }: Props) {
 
   const refreshAll = () => {
     setIsLoading(true);
-    fetchStudies();
-    fetchChartData();
+    loadData();
     fetchProcessGroups();
   };
 
@@ -280,17 +281,16 @@ function App({ organization, account }: Props) {
       alert('ไม่มีข้อมูลให้ Export');
       return null;
     }
-    const { data: defects, error } = await supabase
-      .from('defect_logs')
-      .select('*')
-      .match(orgFilter)
-      .in('study_id', filteredStudies.map((s) => s.id));
+    // ไม่ใช้ .in('study_id', [...]) เพราะ id หลายร้อยตัวทำให้ URL ยาวเกินจนคำขอล้มเหลว
+    // ดึง Defect ทั้งหมดของบริษัททีละหน้า แล้วกรองเฉพาะรอบของ Process นี้ในเบราว์เซอร์
+    const { data: defects, error } = await fetchAllRows<DefectLog>('defect_logs', '*', orgFilter);
     if (error) {
       console.error('Error fetching defects:', error);
       alert('โหลดข้อมูล Defect ไม่สำเร็จ กรุณาลองใหม่');
       return null;
     }
-    return buildStudyRows(filteredStudies, rawSteps, defects || []);
+    const studyIds = new Set(filteredStudies.map((s) => s.id));
+    return buildStudyRows(filteredStudies, rawSteps, defects.filter((d) => studyIds.has(d.study_id)));
   };
 
   // ใช้ finally เพื่อให้ปุ่ม Export กลับมากดได้เสมอ แม้ Export จะล้มเหลว
@@ -395,9 +395,16 @@ function App({ organization, account }: Props) {
     );
   }
 
+  const loadErrorBanner = loadError && (
+    <p className="auth-message auth-error" role="alert">
+      โหลดข้อมูลไม่สำเร็จ ข้อมูลที่แสดงอาจไม่ครบ กด &quot;รีเฟรชข้อมูล&quot; เพื่อลองใหม่ ({loadError})
+    </p>
+  );
+
   if (selectedGroupId === null) {
     return (
       <AppLayout {...layout}>
+        {loadErrorBanner}
         <ProcessPickerPage cards={processCards} isLoading={isLoading} onSelect={setSelectedGroupId} onRefresh={refreshAll} />
       </AppLayout>
     );
@@ -445,6 +452,8 @@ function App({ organization, account }: Props) {
           <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
         </div>
       </div>
+
+      {loadErrorBanner}
 
       <div className="kpi-grid">
         <div className="kpi-card">

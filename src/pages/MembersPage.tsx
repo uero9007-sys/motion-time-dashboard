@@ -62,11 +62,17 @@ export default function MembersPage({ organization, account }: Props) {
   }, [load]);
 
   // ทุกการแก้ไขผ่าน run: แสดงผลลัพธ์ แล้วโหลดรายชื่อใหม่
-  const run = async (action: () => PromiseLike<{ error: { message: string } | null }>, success: string) => {
+  const run = async (action: () => PromiseLike<{ error: { message: string } | null; data?: unknown }>, success: string) => {
     setMessage(null);
-    const { error } = await action();
+    const { error, data } = await action();
     if (error) {
       setMessage({ kind: 'error', text: error.message.includes('duplicate key') ? 'อีเมลนี้ได้รับเชิญไว้แล้ว' : error.message });
+      return false;
+    }
+    // RLS ไม่อนุญาต = Supabase ไม่คืน error แต่แก้ได้ 0 แถว ต้องเช็คเอง ไม่งั้นขึ้นว่าสำเร็จทั้งที่ไม่มีอะไรเปลี่ยน
+    if (Array.isArray(data) && data.length === 0) {
+      setMessage({ kind: 'error', text: 'ไม่มีสิทธิ์ทำรายการนี้ หรือข้อมูลถูกเปลี่ยนไปแล้ว กรุณารีเฟรชแล้วลองใหม่' });
+      await load();
       return false;
     }
     setMessage({ kind: 'success', text: success });
@@ -91,12 +97,12 @@ export default function MembersPage({ organization, account }: Props) {
 
   const cancelInvitation = (inv: Invitation) => {
     if (!window.confirm(`ยกเลิกคำเชิญของ ${inv.email} หรือไม่?`)) return;
-    run(() => supabase.from('invitations').delete().eq('id', inv.id), `ยกเลิกคำเชิญของ ${inv.email} แล้ว`);
+    run(() => supabase.from('invitations').delete().eq('id', inv.id).select('id'), `ยกเลิกคำเชิญของ ${inv.email} แล้ว`);
   };
 
   const changeRole = (member: Member, role: OrgRole) => {
     run(
-      () => supabase.from('organization_members').update({ role }).eq('organization_id', organization.id).eq('user_id', member.user_id),
+      () => supabase.from('organization_members').update({ role }).eq('organization_id', organization.id).eq('user_id', member.user_id).select('user_id'),
       `เปลี่ยน ${member.email} เป็น ${ROLE_LABELS[role]} แล้ว`
     ).then((ok) => {
       // ถ้าเปลี่ยนบทบาทของตัวเอง สิทธิ์ทั้งแอปต้องเปลี่ยนตาม
@@ -111,7 +117,7 @@ export default function MembersPage({ organization, account }: Props) {
       : `นำ ${member.email} ออกจาก ${organization.name} หรือไม่?`;
     if (!window.confirm(question)) return;
     run(
-      () => supabase.from('organization_members').delete().eq('organization_id', organization.id).eq('user_id', member.user_id),
+      () => supabase.from('organization_members').delete().eq('organization_id', organization.id).eq('user_id', member.user_id).select('user_id'),
       isSelf ? 'ออกจากบริษัทแล้ว' : `นำ ${member.email} ออกแล้ว`
     ).then((ok) => {
       if (ok && isSelf) account.onMembershipsChanged();

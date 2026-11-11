@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { fetchAllRows } from '../lib/fetchAll';
 import { matchesGroup, mean, sampleStdDev } from '../lib/ie';
 import type { DefectLog, ProcessGroup, Step, Study, StudyMetric } from '../types';
 
@@ -38,14 +38,13 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from('defect_logs')
-      .select('*')
-      .match(organizationId ? { organization_id: organizationId } : {})
-      .then(({ data, error }) => {
+    // ทีละหน้า: Supabase ตัดที่ 1,000 แถวต่อคำขอ ถ้าไม่แบ่งหน้า Defect เกินนั้นจะหายเงียบๆ
+    fetchAllRows<DefectLog>('defect_logs', '*', organizationId ? { organization_id: organizationId } : {}).then(
+      ({ data, error }) => {
         if (error) console.error('Error fetching defect logs:', error);
-        else if (!cancelled && data) setDefects(data);
-      });
+        else if (!cancelled) setDefects(data);
+      }
+    );
     return () => {
       cancelled = true;
     };
