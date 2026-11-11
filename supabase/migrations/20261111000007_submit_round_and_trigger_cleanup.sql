@@ -8,7 +8,7 @@
 -- 2) steps / defect_logs มี trigger 2 ชุดที่ทำงานเดียวกัน (เติม organization_id จาก study)
 --    - *_inherit_organization   จากขั้นที่ 1 (ถ้าไม่พบ study จะได้ null แล้วไปติด not null)
 --    - *_set_organization       จากขั้นที่ 4 (ถ้าไม่พบ study แจ้ง error ชัดเจน)  ← เก็บตัวนี้
---    ลบชุดแรกออก ผลลัพธ์เหมือนเดิมทุกกรณี แค่ไม่ทำงานซ้ำ 2 ครั้งต่อแถว
+--    ถ้ามีครบทั้งสองชุด ลบชุดแรกออก (ผลลัพธ์เหมือนเดิม แค่ไม่ทำงานซ้ำ) ถ้ามีชุดเดียว ไม่แตะอะไร
 --
 -- รันครั้งเดียวทั้งไฟล์ใน Supabase → SQL Editor  (ยกเลิก: rollback/20261111000007_submit_round_and_trigger_cleanup.down.sql)
 -- ตรวจผล: verify.sql ข้อ 4 และ 5
@@ -61,21 +61,26 @@ revoke execute on function public.submit_study_round(jsonb, jsonb, jsonb) from p
 grant execute on function public.submit_study_round(jsonb, jsonb, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- 2) ลบ trigger ที่ซ้ำ — ตรวจก่อนว่าตัวที่เก็บไว้ (ขั้นที่ 4) มีอยู่จริง ไม่งั้นหยุดทั้งไฟล์ ไม่มีอะไรถูกเปลี่ยน
+-- 2) ลบ trigger ที่ซ้ำ — เฉพาะตอนที่มีครบทั้งสองชุดจริง
+--    ฐานข้อมูลที่ไม่เคยรันขั้นที่ 4 (เช่นฐานข้อมูลจริงเมื่อ 2026-11-11) มีแค่ *_inherit_organization
+--    ชุดนั้นเป็นตัวเดียวที่เติม organization_id ให้ Step / Defect จึงต้องเก็บไว้ ไม่ลบ
 -- ---------------------------------------------------------------------------
 do $$
+declare
+  v_has_set boolean :=
+    exists (select 1 from pg_trigger where tgname = 'steps_set_organization' and tgrelid = 'public.steps'::regclass)
+    and exists (select 1 from pg_trigger where tgname = 'defect_logs_set_organization' and tgrelid = 'public.defect_logs'::regclass);
 begin
-  if not exists (select 1 from pg_trigger where tgname = 'steps_set_organization' and tgrelid = 'public.steps'::regclass)
-     or not exists (select 1 from pg_trigger where tgname = 'defect_logs_set_organization' and tgrelid = 'public.defect_logs'::regclass)
-  then
-    raise exception 'ไม่พบ trigger *_set_organization ของขั้นที่ 4 — รัน 20261003000004_child_org_from_study.sql ก่อน';
+  if v_has_set then
+    drop trigger if exists steps_inherit_organization on public.steps;
+    drop trigger if exists defect_logs_inherit_organization on public.defect_logs;
+    drop function if exists public.inherit_study_organization();
+    raise notice 'ลบ trigger *_inherit_organization ที่ซ้ำแล้ว (เหลือ *_set_organization)';
+  else
+    raise notice 'ไม่พบ *_set_organization (ไม่เคยรันขั้นที่ 4) จึงเก็บ *_inherit_organization ไว้ตามเดิม';
   end if;
 end;
 $$;
-
-drop trigger if exists steps_inherit_organization on public.steps;
-drop trigger if exists defect_logs_inherit_organization on public.defect_logs;
-drop function if exists public.inherit_study_organization();
 
 -- ช่วยหน้า Study / Export ที่ดึง Step และ Defect ทีละรอบ (where study_id = ...) ไม่ต้องสแกนทั้งตาราง
 create index if not exists steps_study_id_idx on public.steps(study_id);
