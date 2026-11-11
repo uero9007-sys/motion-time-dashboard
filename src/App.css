@@ -2413,3 +2413,9 @@ section[id] {
   gap: 12px;
   justify-content: flex-end;
 }
+
+/* ข้อความระหว่างโหลดหน้ารอง (React.lazy) */
+.page-loading {
+  padding: 24px;
+  color: var(--color-text-muted);
+}

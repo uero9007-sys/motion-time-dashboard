@@ -24,6 +24,8 @@ export default defineConfig(({ command }) => ({
   server: { allowedHosts: ['.trycloudflare.com'] },
   preview: { allowedHosts: ['.trycloudflare.com'] },
   build: {
+    // xlsx (~500 kB) โหลดเฉพาะตอนกด Export (dynamic import) ไม่ได้อยู่ในการโหลดหน้าแรก จึงตั้งเกณฑ์เตือนไว้เหนือขนาดนี้
+    chunkSizeWarningLimit: 520,
     rollupOptions: {
       output: {
         manualChunks: {

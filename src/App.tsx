@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { fetchAllRows } from './lib/fetchAll';
 import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
@@ -16,14 +16,17 @@ import {
   requiredSampleSize,
 } from './lib/ie';
 import type { DefectLog, Page, ProcessGroup, Step, Study, StudyMetric } from './types';
-import LearnPage from './pages/LearnPage';
-import AnalysisPage from './pages/AnalysisPage';
-import LineBalancingPage from './pages/LineBalancingPage';
-import SettingsPage from './pages/SettingsPage';
-import MembersPage from './pages/MembersPage';
 import { canEditData, type Account, type Membership } from './lib/auth';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type DashboardSettings } from './lib/settings';
 import './App.css';
+
+// หน้ารองโหลดเมื่อเปิดครั้งแรก (Line Balancing มี dnd-kit, สมาชิกมีตัวสร้าง QR) หน้าแรกจึงโหลดเร็วขึ้น
+const LearnPage = lazy(() => import('./pages/LearnPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const LineBalancingPage = lazy(() => import('./pages/LineBalancingPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const MembersPage = lazy(() => import('./pages/MembersPage'));
+const pageFallback = <p className="page-loading">กำลังโหลด...</p>;
 
 type Props = {
   organization: Membership;
@@ -342,7 +345,9 @@ function App({ organization, account }: Props) {
   if (page === 'members' && account) {
     return (
       <AppLayout {...layout}>
-        <MembersPage organization={organization} account={account} />
+        <Suspense fallback={pageFallback}>
+          <MembersPage organization={organization} account={account} />
+        </Suspense>
       </AppLayout>
     );
   }
@@ -350,7 +355,9 @@ function App({ organization, account }: Props) {
   if (page === 'learn') {
     return (
       <AppLayout {...layout}>
-        <LearnPage />
+        <Suspense fallback={pageFallback}>
+          <LearnPage />
+        </Suspense>
       </AppLayout>
     );
   }
@@ -358,16 +365,18 @@ function App({ organization, account }: Props) {
   if (page === 'analysis') {
     return (
       <AppLayout {...layout}>
-        <AnalysisPage
-          studies={studies}
-          steps={rawSteps}
-          metrics={studyMetrics}
-          groups={groupOptions}
-          isLoading={isLoading}
-          cvStable={settings.cvStable}
-          cvWatch={settings.cvWatch}
-          organizationId={orgId}
-        />
+        <Suspense fallback={pageFallback}>
+          <AnalysisPage
+            studies={studies}
+            steps={rawSteps}
+            metrics={studyMetrics}
+            groups={groupOptions}
+            isLoading={isLoading}
+            cvStable={settings.cvStable}
+            cvWatch={settings.cvWatch}
+            organizationId={orgId}
+          />
+        </Suspense>
       </AppLayout>
     );
   }
@@ -375,7 +384,9 @@ function App({ organization, account }: Props) {
   if (page === 'calc') {
     return (
       <AppLayout {...layout}>
-        <LineBalancingPage organizationId={orgId} defaultShiftMinutes={settings.shiftMinutes} />
+        <Suspense fallback={pageFallback}>
+          <LineBalancingPage organizationId={orgId} defaultShiftMinutes={settings.shiftMinutes} />
+        </Suspense>
       </AppLayout>
     );
   }
@@ -383,14 +394,16 @@ function App({ organization, account }: Props) {
   if (page === 'settings') {
     return (
       <AppLayout {...layout}>
-        <SettingsPage
-          settings={settings}
-          onChange={updateSettings}
-          onReset={() => updateSettings(DEFAULT_SETTINGS)}
-          onRefresh={refreshAll}
-          counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
-          organization={account ? organization : undefined}
-        />
+        <Suspense fallback={pageFallback}>
+          <SettingsPage
+            settings={settings}
+            onChange={updateSettings}
+            onReset={() => updateSettings(DEFAULT_SETTINGS)}
+            onRefresh={refreshAll}
+            counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
+            organization={account ? organization : undefined}
+          />
+        </Suspense>
       </AppLayout>
     );
   }
