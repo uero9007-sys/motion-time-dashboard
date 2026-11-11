@@ -24,3 +24,27 @@ order by 1;
 select tablename, policyname, cmd, roles
 from pg_policies where schemaname = 'public'
 order by tablename, policyname;
+
+-- 4) ฟังก์ชัน RPC ที่แอป / Dashboard เรียก (ขั้นที่ 7: ต้องมี submit_study_round)
+select p.proname as function_name, pg_get_function_identity_arguments(p.oid) as args,
+       case when p.prosecdef then 'definer' else 'invoker' end as security
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in ('submit_study_round', 'join_organization', 'rotate_invite_code', 'create_organization',
+                    'accept_invitations', 'list_organization_members', 'is_org_member', 'has_org_role')
+order by 1;
+
+-- 5) trigger ของตารางข้อมูล (หลังขั้นที่ 7: steps / defect_logs เหลือเฉพาะ *_set_organization)
+select c.relname as table_name, t.tgname as trigger_name, p.proname as function_name
+from pg_trigger t
+join pg_class c on c.oid = t.tgrelid
+join pg_namespace n on n.oid = c.relnamespace
+join pg_proc p on p.oid = t.tgfoid
+where n.nspname = 'public' and not t.tgisinternal
+order by 1, 2;
+
+-- 6) คอลัมน์ของตารางหลัก ใช้เทียบกับ migrations/20261001000000_base_tables.sql
+select table_name, column_name, data_type, is_nullable, column_default
+from information_schema.columns
+where table_schema = 'public' and table_name in ('process_groups', 'studies', 'steps', 'defect_logs')
+order by table_name, ordinal_position;
