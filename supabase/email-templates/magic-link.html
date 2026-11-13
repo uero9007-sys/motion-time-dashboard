@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>เข้าสู่ระบบ MTS</title>
+</head>
+<body style="margin:0; padding:0; background-color:#EEF1F0;">
+<!-- ข้อความตัวอย่างที่แสดงต่อจากหัวเรื่องในกล่องจดหมาย -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#EEF1F0;">ลิงก์เข้าสู่ระบบ MTS ของคุณ</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EEF1F0;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px; background-color:#FFFFFF; border:1px solid #D2DAD9; border-radius:8px;">
+        <tr>
+          <td style="padding:24px 32px; border-bottom:2px solid #15252A; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background-color:#0E6B66; color:#FFFFFF; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif; font-size:13px; font-weight:bold; padding:6px 10px; border-radius:4px;">MTS</td>
+                <td style="padding-left:10px; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif; font-size:16px; font-weight:bold; color:#15252A;">Motion &amp; Time Study</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 32px 8px; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif; color:#15252A;">
+            <h1 style="margin:0 0 16px; font-size:22px; line-height:1.4; font-weight:bold; color:#15252A;">เข้าสู่ระบบ MTS</h1>
+            <p style="margin:0 0 24px; font-size:15px; line-height:1.7; color:#15252A;">กดปุ่มด้านล่างเพื่อเข้าสู่ระบบด้วยบัญชี <strong>{{ .Email }}</strong> โดยไม่ต้องใช้รหัสผ่าน</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-radius:4px; background-color:#0E6B66;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block; padding:14px 28px; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif; font-size:16px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:4px;">เข้าสู่ระบบ</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:24px 0 0; font-size:14px; line-height:1.7; color:#56676C;">เปิดลิงก์นี้บนเครื่องที่คุณต้องการใช้งาน ลิงก์ใช้ได้ครั้งเดียวและมีอายุจำกัด</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 24px; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif;">
+            <p style="margin:0 0 6px; font-size:13px; line-height:1.6; color:#56676C;">ถ้ากดปุ่มไม่ได้ ให้คัดลอกลิงก์นี้ไปวางในเบราว์เซอร์</p>
+            <p style="margin:0; font-size:12px; line-height:1.6; word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#0E6B66;">{{ .ConfirmationURL }}</a></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 24px; border-top:1px solid #D2DAD9; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif;">
+            <p style="margin:0; font-size:13px; line-height:1.6; color:#56676C;">ถ้าคุณไม่ได้ขอลิงก์นี้ ไม่ต้องทำอะไร ไม่มีใครเข้าบัญชีของคุณได้หากไม่ได้กดลิงก์</p>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+        <tr>
+          <td style="padding:16px 32px; font-family:'Leelawadee UI', 'Noto Sans Thai', Tahoma, Arial, sans-serif; font-size:12px; line-height:1.6; color:#56676C;">
+            อีเมลนี้ส่งถึง {{ .Email }} โดยอัตโนมัติจากระบบ MTS Motion &amp; Time Study กรุณาอย่าตอบกลับอีเมลนี้
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

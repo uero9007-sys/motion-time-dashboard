@@ -20,7 +20,7 @@ const fmtDateTime = (d: string) =>
 const s2 = (n: number) => n.toFixed(2);
 
 const CHART_WIDTH = 680;
-const axisTick = { fontSize: 10, fill: '#756B60' };
+const axisTick = { fontSize: 10, fill: '#56676C' };
 
 export default function ProcessReport({ groupName, rows, stepSummaries, sampleSize, cvStable, cvWatch, generatedAt }: Props) {
   const totalSecs = rows.map((r) => r.totalMs / 1000);
@@ -167,11 +167,11 @@ export default function ProcessReport({ groupName, rows, stepSummaries, sampleSi
             layout="vertical"
             margin={{ top: 4, right: 24, bottom: 4, left: 8 }}
           >
-            <CartesianGrid stroke="#EEE7DC" horizontal={false} />
+            <CartesianGrid stroke="#D2DAD9" horizontal={false} />
             <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
             <YAxis type="category" dataKey="name" width={210} tick={axisTick} tickLine={false} axisLine={false} />
-            <Bar dataKey="value" fill="#A07C5B" radius={[0, 3, 3, 0]} isAnimationActive={false}
-              label={{ position: 'right', fontSize: 10, fill: '#2E2925' }} />
+            <Bar dataKey="value" fill="#0E6B66" radius={[0, 3, 3, 0]} isAnimationActive={false}
+              label={{ position: 'right', fontSize: 10, fill: '#15252A' }} />
           </BarChart>
         </div>
         {rows.length > 1 && (
@@ -187,16 +187,16 @@ export default function ProcessReport({ groupName, rows, stepSummaries, sampleSi
               }))}
               margin={{ top: 8, right: 24, bottom: 4, left: 8 }}
             >
-              <CartesianGrid stroke="#EEE7DC" vertical={false} />
-              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: '#DDD2C2' }}
-                label={{ value: 'รอบที่', position: 'insideBottomRight', offset: -2, fontSize: 10, fill: '#756B60' }} />
+              <CartesianGrid stroke="#D2DAD9" vertical={false} />
+              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: '#A7B5B4' }}
+                label={{ value: 'รอบที่', position: 'insideBottomRight', offset: -2, fontSize: 10, fill: '#56676C' }} />
               <YAxis tick={axisTick} tickLine={false} axisLine={false} />
-              <Line dataKey="actual" name="เวลาจริง" stroke="#A07C5B" strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
-              <Line dataKey="standard" name="Standard" stroke="#5E7552" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+              <Line dataKey="actual" name="เวลาจริง" stroke="#0E6B66" strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
+              <Line dataKey="standard" name="Standard" stroke="#15252A" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
             </LineChart>
             <div className="rp-legend">
-              <span><i style={{ background: '#A07C5B' }} />เวลาจริง</span>
-              <span><i style={{ background: '#5E7552' }} />Standard Time</span>
+              <span><i style={{ background: '#0E6B66' }} />เวลาจริง</span>
+              <span><i style={{ background: '#15252A' }} />Standard Time</span>
             </div>
           </div>
         )}

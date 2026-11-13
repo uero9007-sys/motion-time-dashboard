@@ -32,6 +32,12 @@ export default function ProcessPickerPage({ cards, isLoading, onSelect, onRefres
         <p className="empty-state">ยังไม่มี Process ในระบบ</p>
       ) : (
         <div className="process-grid">
+          <div className="process-list-head" aria-hidden="true">
+            <span>ชื่อ Process</span>
+            <span className="num">จำนวน Process</span>
+            <span className="num">จำนวนรอบ</span>
+            <span>วันที่จับ</span>
+          </div>
           {cards.map((card) => (
             <button key={card.id} className="process-card" onClick={() => onSelect(card.id)}>
               <span className="process-card-name">{card.name}</span>
@@ -39,17 +45,13 @@ export default function ProcessPickerPage({ cards, isLoading, onSelect, onRefres
                 <span className="process-card-meta">ยังไม่มีข้อมูล</span>
               ) : (
                 <>
-                  <span className="process-card-meta">
-                    {card.processCount} Process · {card.cycleCount} รอบ
+                  <span className="process-card-num">{card.processCount} <small>Process</small></span>
+                  <span className="process-card-num">{card.cycleCount} <small>รอบ</small></span>
+                  <span className="process-card-date">
+                    {card.lastCreatedAt ? `ล่าสุด ${new Date(card.lastCreatedAt).toLocaleDateString('th-TH')}` : ''}
                   </span>
-                  {card.lastCreatedAt && (
-                    <span className="process-card-date">
-                      ล่าสุด {new Date(card.lastCreatedAt).toLocaleDateString('th-TH')}
-                    </span>
-                  )}
                 </>
               )}
-              <span className="process-card-arrow" aria-hidden="true">→</span>
             </button>
           ))}
         </div>

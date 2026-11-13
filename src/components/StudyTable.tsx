@@ -18,7 +18,8 @@ const formatTime = (ms: number) => (ms / 1000).toFixed(2);
 
 export default function StudyTable({ studies, expandedId, stepsCache, defectsCache, isLoadingDetail, onToggle, onStepRename }: Props) {
   return (
-    <table>
+    <div className="table-wrap">
+    <table className="study-sheet">
       <thead>
         <tr>
           <th></th><th>Process</th><th>ผู้ปฏิบัติงาน</th><th>วันที่ทำ</th><th>เสร็จสิ้นเมื่อ</th>
@@ -33,7 +34,7 @@ export default function StudyTable({ studies, expandedId, stepsCache, defectsCac
           const standardTime = calculateStandardTime(steps, study.allowance_percent);
           return (
             <Fragment key={study.id}>
-              <tr className="clickable-row" onClick={() => onToggle(study.id)}>
+              <tr className={`clickable-row${isExpanded ? ' is-open' : ''}`} onClick={() => onToggle(study.id)}>
                 <td>{isExpanded ? '▼' : '▶'}</td>
                 <td>{study.process_name}</td>
                 <td>{study.operator_name || '-'}</td>
@@ -49,10 +50,11 @@ export default function StudyTable({ studies, expandedId, stepsCache, defectsCac
                       <div className="detail-content">
                         <h3>{onStepRename ? 'รายการ Step (แก้ชื่อได้ พิมพ์แล้วกด Enter)' : 'รายการ Step'}</h3>
                         <table className="inner-table">
-                          <thead><tr><th>ชื่อ Step</th><th>เวลา (วินาที)</th></tr></thead>
+                          <thead><tr><th className="step-no">ที่</th><th>ชื่อ Step</th><th className="num">เวลา (วินาที)</th></tr></thead>
                           <tbody>
-                            {steps.map((step) => (
+                            {steps.map((step, index) => (
                               <tr key={`${step.id}-${step.name}`}>
+                                <td className="step-no">{index + 1}</td>
                                 <td>
                                   {onStepRename ? (
                                     <input
@@ -69,19 +71,19 @@ export default function StudyTable({ studies, expandedId, stepsCache, defectsCac
                                     step.name
                                   )}
                                 </td>
-                                <td>{formatTime(step.time_ms)}s</td>
+                                <td className="num">{formatTime(step.time_ms)}</td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr><td><strong>รวม (เวลาจริง)</strong></td><td><strong>{formatTime(totalTime)}s</strong></td></tr>
+                            <tr><td /><td>รวม (เวลาจริง)</td><td className="num">{formatTime(totalTime)}</td></tr>
                           </tfoot>
                         </table>
                         {steps.length > 0 && (
                           <div className="standard-time-box">
-                            <div><span className="std-label">Standard Time: </span><span className="std-value">{(standardTime / 1000).toFixed(2)}s</span></div>
-                            <div><span className="std-label">ประสิทธิภาพ: </span><span className="std-value">{calculateEfficiency(totalTime, standardTime).toFixed(1)}%</span></div>
-                            <div><span className="std-label">ผลิตได้: </span><span className="std-value">{study.quantity_produced || 1} ชิ้น</span></div>
+                            <div><span className="std-label">Standard Time</span><span className="std-value">{(standardTime / 1000).toFixed(2)} <small>วินาที</small></span></div>
+                            <div><span className="std-label">ประสิทธิภาพ</span><span className="std-value">{calculateEfficiency(totalTime, standardTime).toFixed(1)} <small>%</small></span></div>
+                            <div><span className="std-label">ผลิตได้</span><span className="std-value">{study.quantity_produced || 1} <small>ชิ้น</small></span></div>
                           </div>
                         )}
                         <h3>Defect Log ({defects.length})</h3>
@@ -102,5 +104,6 @@ export default function StudyTable({ studies, expandedId, stepsCache, defectsCac
         })}
       </tbody>
     </table>
+    </div>
   );
 }

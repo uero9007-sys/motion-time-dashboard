@@ -3,6 +3,9 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import type { Session } from '@supabase/supabase-js';
 import App from '../App';
 import LoginPage from '../pages/LoginPage';
+import AuthShell from './AuthShell';
+import WelcomeGuide from './WelcomeGuide';
+import { hasSeenGuide, markGuideSeen, takeEmailVerified } from '../lib/verify';
 import { supabase } from '../lib/supabase';
 import { authErrorMessage, loadSelectedOrgId, MIN_PASSWORD_LENGTH, saveSelectedOrgId, type Membership, type OrgRole } from '../lib/auth';
 import {
@@ -22,16 +25,10 @@ type MembershipState = { userId: string; list: Membership[]; fullName: string } 
 
 function AuthScreen({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="auth-screen">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <span className="sidebar-logo">MTS</span>
-          <span className="sidebar-title">Motion &amp; Time Study</span>
-        </div>
-        <h1>{title}</h1>
-        {children}
-      </div>
-    </div>
+    <AuthShell>
+      <h1>{title}</h1>
+      {children}
+    </AuthShell>
   );
 }
 
@@ -74,6 +71,7 @@ export default function AuthGate() {
   const [reloadKey, setReloadKey] = useState(0);
   const joinRef = useRef<JoinNotice | null>(null);
   const [joinNotice, setJoinNotice] = useState<JoinNotice | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -126,15 +124,24 @@ export default function AuthGate() {
       // ชื่อที่แสดงใน Sidebar ไม่มีก็ไม่เป็นไร (เช่น ยังไม่ได้รัน migration ขั้นที่ 5) จึงไม่ถือเป็น error
       const profile = await supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle();
       if (cancelled) return;
+      // เพิ่งยืนยันอีเมลเสร็จ (มาจากลิงก์ในอีเมล หรือหน้าสมัครที่รออยู่เข้าสู่ระบบให้เอง) → แจ้งให้รู้ว่าสำเร็จ
+      // อ่านหลังจุดตรวจ cancelled สุดท้าย เพราะอ่านแล้วล้าง (StrictMode รัน effect ซ้ำ รอบที่ถูกยกเลิกต้องไม่กินค่าไป)
+      const verified = takeEmailVerified();
       const joined = joinRef.current;
       if (joined) {
         joinRef.current = null;
-        setJoinNotice(joined);
+        setJoinNotice(verified && joined.kind === 'success' ? { ...joined, text: `ยืนยันอีเมลเรียบร้อยแล้ว ${joined.text}` } : joined);
         if (joined.orgId) {
           saveSelectedOrgId(joined.orgId);
           setSelectedOrgId(joined.orgId);
         }
+      } else if (verified) {
+        setJoinNotice({
+          kind: 'success',
+          text: 'ยืนยันอีเมลเรียบร้อยแล้ว บัญชีพร้อมใช้งาน ถ้าสมัครจากแอปมือถือหรือเครื่องอื่น กลับไปที่นั่นได้เลย ระบบจะเข้าสู่ระบบให้เอง',
+        });
       }
+      if (!hasSeenGuide(userId)) setGuideOpen(true);
       setMemberships({ userId, list, fullName: profile.data?.full_name ?? '' });
     })();
     return () => {
@@ -192,9 +199,15 @@ export default function AuthGate() {
     setSelectedOrgId(id);
   };
 
+  const closeGuide = () => {
+    setGuideOpen(false);
+    markGuideSeen(session.user.id);
+  };
+
   // key ทำให้ App เริ่มใหม่ทั้งหมดเมื่อสลับบริษัท ข้อมูลของบริษัทก่อนหน้าจึงไม่ค้างอยู่
   return (
     <>
+      {guideOpen && <WelcomeGuide onClose={closeGuide} />}
       {joinNotice && (
         <div className={`join-toast ${joinNotice.kind === 'error' ? 'auth-error' : 'auth-success'}`} role="status">
           <span>{joinNotice.text}</span>
@@ -211,6 +224,7 @@ export default function AuthGate() {
           onSwitchOrganization: switchOrganization,
           onSignOut: signOut,
           onMembershipsChanged: () => setReloadKey((k) => k + 1),
+          onShowGuide: () => setGuideOpen(true),
         }}
       />
     </>

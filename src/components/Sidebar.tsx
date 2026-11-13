@@ -59,6 +59,7 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
             <span className="sidebar-user" title={account.email}>
               {account.email} · {ROLE_LABELS[organization.role]}
             </span>
+            <button className="link-button" onClick={account.onShowGuide}>วิธีใช้งาน</button>
             <button className="link-button" onClick={account.onSignOut}>ออกจากระบบ</button>
           </>
         )}

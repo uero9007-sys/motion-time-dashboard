@@ -48,11 +48,11 @@ export default function SampleSizeCard({ stats, confidence, errorPercent, onConf
             <span className="stat-label">ส่วนเบี่ยงเบนมาตรฐาน</span>
             <span className="stat-value">{stats.sd.toFixed(2)}s</span>
           </div>
-          <div className="stat-item highlight">
+          <div className="stat-item">
             <span className="stat-label">รอบที่ควรมีทั้งหมด</span>
             <span className="stat-value">{stats.required}</span>
           </div>
-          <div className={`stat-item ${stats.remaining === 0 ? 'success' : 'highlight'}`}>
+          <div className={`stat-item ${stats.remaining === 0 ? 'success' : 'warning'}`}>
             <span className="stat-label">{stats.remaining === 0 ? 'สถานะ' : 'ต้องจับเพิ่มอีก'}</span>
             <span className="stat-value">{stats.remaining === 0 ? '✓ เพียงพอแล้ว' : `${stats.remaining} รอบ`}</span>
           </div>

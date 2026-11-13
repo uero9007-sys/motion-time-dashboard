@@ -15,7 +15,7 @@ type State =
 // QR สร้างในเครื่อง (ไลบรารี qrcode) ไม่ส่งรหัสไปเว็บสร้าง QR ภายนอก เพราะรหัสจะรั่วไปยังบุคคลที่สาม
 // ระดับแก้ข้อผิดพลาด Q (~25%) ให้สแกนได้แม้กระดาษที่พิมพ์ติดหน้างานเปื้อนหรือยับบางส่วน
 const renderQr = (code: string) =>
-  QRCode.toDataURL(inviteUrl(code), { errorCorrectionLevel: 'Q', margin: 2, width: 720, color: { dark: '#2E2925', light: '#FFFFFF' } });
+  QRCode.toDataURL(inviteUrl(code), { errorCorrectionLevel: 'Q', margin: 2, width: 720, color: { dark: '#15252A', light: '#FFFFFF' } });
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
 

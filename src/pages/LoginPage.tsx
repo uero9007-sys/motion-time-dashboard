@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { authErrorMessage, authRedirectUrl, MIN_PASSWORD_LENGTH } from '../lib/auth';
+import AuthShell from '../components/AuthShell';
+import { classifySignInError, markEmailVerified, VERIFY_MAX_ATTEMPTS, VERIFY_POLL_MS } from '../lib/verify';
 import { formatInviteCode, INVITE_CODE_LENGTH, normalizeInviteCode, peekPendingInvite } from '../lib/invite';
 
 type Mode = 'password' | 'signup' | 'magic' | 'forgot';
@@ -27,10 +29,67 @@ export default function LoginPage() {
   const [companyName, setCompanyName] = useState('');
   const [inviteCode, setInviteCode] = useState(pendingCode ? formatInviteCode(pendingCode) : '');
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  // สมัครแล้วรอผู้ใช้กดลิงก์ยืนยันในอีเมล: เก็บอีเมล/รหัสผ่านไว้ในหน่วยความจำเพื่อเข้าสู่ระบบให้เองเมื่อยืนยันเสร็จ
+  const [pendingVerify, setPendingVerify] = useState<{ email: string; password: string } | null>(null);
+  const [checkingVerify, setCheckingVerify] = useState(false);
+
+  // ลิงก์ยืนยันอาจถูกเปิดในแท็บอื่นหรือเครื่องอื่น หน้านี้จึงลองเข้าสู่ระบบเป็นระยะและทุกครั้งที่กลับมาที่แท็บ (ดู lib/verify.ts)
+  // สำเร็จ = ยืนยันแล้ว AuthGate ได้ session และเปิด Dashboard ให้เอง
+  useEffect(() => {
+    if (!pendingVerify) return;
+    let stopped = false;
+    let inFlight = false;
+    let attempts = 0;
+    const check = async () => {
+      if (stopped || inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
+      const { error } = await supabase.auth.signInWithPassword(pendingVerify);
+      inFlight = false;
+      if (stopped) return;
+      if (!error) {
+        stopped = true;
+        markEmailVerified();
+        return;
+      }
+      if (classifySignInError(error.message) === 'failed') {
+        stopped = true;
+        setPendingVerify(null);
+        setStatus({ kind: 'error', message: authErrorMessage(error.message) });
+      }
+    };
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      if (attempts > VERIFY_MAX_ATTEMPTS) window.clearInterval(interval);
+      else check();
+    }, VERIFY_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [pendingVerify]);
+
+  // ปุ่ม "ยืนยันแล้ว" ให้ผู้ใช้ตรวจเองได้ทันทีโดยไม่ต้องรอรอบถัดไป
+  const checkVerifiedNow = async () => {
+    if (!pendingVerify) return;
+    setCheckingVerify(true);
+    const { error } = await supabase.auth.signInWithPassword(pendingVerify);
+    setCheckingVerify(false);
+    if (!error) return markEmailVerified();
+    if (classifySignInError(error.message) === 'failed') setPendingVerify(null);
+    setStatus({ kind: 'error', message: authErrorMessage(error.message) });
+  };
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setStatus({ kind: 'idle' });
+    setPendingVerify(null);
   };
 
   const fail = (message: string) => setStatus({ kind: 'error', message: authErrorMessage(message) });
@@ -76,7 +135,10 @@ export default function LoginPage() {
       });
       if (error) return fail(error.message);
       // ปิด "Confirm email" ใน Supabase แล้ว จะได้ session ทันทีและ AuthGate พาเข้า Dashboard เอง
-      if (!data.session) setStatus({ kind: 'sent', message: `ส่งลิงก์ยืนยันไปที่ ${address} แล้ว กดลิงก์ในอีเมลเพื่อเปิดใช้บัญชี` });
+      if (!data.session) {
+        setStatus({ kind: 'sent', message: `ส่งอีเมลยืนยันไปที่ ${address} แล้ว เปิดอีเมลแล้วกดปุ่มยืนยัน` });
+        setPendingVerify({ email: address, password });
+      }
       return;
     }
 
@@ -100,12 +162,7 @@ export default function LoginPage() {
   const needsPassword = mode === 'password' || isSignup;
 
   return (
-    <div className="auth-screen">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <span className="sidebar-logo">MTS</span>
-          <span className="sidebar-title">Motion &amp; Time Study</span>
-        </div>
+    <AuthShell>
 
         {(mode === 'password' || isSignup) && (
           <div className="auth-tabs" role="tablist">
@@ -210,6 +267,14 @@ export default function LoginPage() {
 
           {status.kind === 'error' && <p className="auth-message auth-error" role="alert">{status.message}</p>}
           {status.kind === 'sent' && <p className="auth-message auth-success" role="status">{status.message}</p>}
+          {pendingVerify && (
+            <div className="verify-wait">
+              <p>กำลังรอการยืนยัน ยืนยันเสร็จแล้วกลับมาที่หน้านี้ได้เลย ระบบจะเข้าสู่ระบบให้เอง</p>
+              <button type="button" className="btn" onClick={checkVerifiedNow} disabled={checkingVerify}>
+                {checkingVerify ? 'กำลังตรวจสอบ...' : 'ยืนยันแล้ว ตรวจสอบตอนนี้'}
+              </button>
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {busy ? 'กำลังดำเนินการ...' : mode === 'password' ? 'เข้าสู่ระบบ' : isSignup ? 'สมัครและเข้าใช้งาน' : 'ส่งลิงก์'}
@@ -233,7 +298,6 @@ export default function LoginPage() {
             ? 'มีรหัสเชิญจาก QR? เลือก "เข้าร่วมทีมด้วยรหัสเชิญ" ด้านบน หรือถ้าถูกเชิญทางอีเมล ให้สมัครด้วยอีเมลนั้น'
             : 'บัญชีเดียวกันใช้ได้ทั้ง Dashboard และแอปมือถือ'}
         </p>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

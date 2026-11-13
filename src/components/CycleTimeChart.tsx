@@ -1,40 +1,69 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { CHART, axisTick, tooltipStyle } from '../chartTheme';
 import type { StudyMetric } from '../types';
+import ChartRefLabel from './ChartRefLabel';
 
 export default function CycleTimeChart({ metrics }: { metrics: StudyMetric[] }) {
+  // เส้นอ้างอิง = Standard Time เฉลี่ยของรอบที่แสดงอยู่ (ค่าเดียวกับ KPI "Standard Time เฉลี่ย")
+  const standardAvg =
+    metrics.length > 0 ? metrics.reduce((sum, m) => sum + m.standardTimeSec, 0) / metrics.length : 0;
+  const hasStandard = Number.isFinite(standardAvg) && standardAvg > 0;
+
   return (
     <div className="card chart-section">
-      <h2>แนวโน้มเวลารวมของแต่ละ Study</h2>
-      <ResponsiveContainer width="100%" height={300}>
+      <div className="chart-head">
+        <h2>แนวโน้มเวลารวมของแต่ละ Study</h2>
+        <p className="chart-key">
+          <span><i />เวลารวมของแต่ละ Study</span>
+          {hasStandard && (
+            <span><i className="is-ref" />Standard Time เฉลี่ย <b>{standardAvg.toFixed(2)} วินาที</b></span>
+          )}
+        </p>
+      </div>
+      <ResponsiveContainer width="100%" height={340}>
         <LineChart
           data={metrics.map((m) => ({ name: m.chartLabel, totalTime: m.totalTimeSec }))}
-          margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+          margin={{ top: 16, right: hasStandard ? 144 : 24, bottom: 8, left: 8 }}
         >
-          <CartesianGrid stroke="#EEE7DC" vertical={false} />
+          <CartesianGrid stroke={CHART.grid} vertical={false} />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 12, fill: '#7A6F63' }}
+            tick={axisTick}
             tickLine={false}
-            axisLine={{ stroke: '#E4DCCF' }}
+            axisLine={{ stroke: CHART.axis }}
+            minTickGap={16}
           />
           <YAxis
-            tick={{ fontSize: 12, fill: '#7A6F63' }}
+            tick={axisTick}
             tickLine={false}
             axisLine={false}
-            label={{ value: 'วินาที', angle: -90, position: 'insideLeft', fill: '#7A6F63', fontSize: 12 }}
+            width={56}
+            label={{ value: 'เวลารวม (วินาที)', angle: -90, position: 'insideLeft', fill: CHART.tick, fontSize: 12, style: { textAnchor: 'middle' } }}
           />
           <Tooltip
-            contentStyle={{ borderRadius: 8, border: '1px solid #E4DCCF', fontFamily: 'inherit' }}
-            formatter={(value) => [`${value} วินาที`, 'เวลารวม']}
+            contentStyle={tooltipStyle}
+            cursor={{ stroke: CHART.axis }}
+            formatter={(value) => [`${Number(value).toFixed(2)} วินาที`, 'เวลารวม']}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="totalTime"
-            stroke="#A07C5B"
-            strokeWidth={2}
-            dot={{ r: 3, fill: '#A07C5B', strokeWidth: 0 }}
-            activeDot={{ r: 5 }}
+            stroke={CHART.series}
+            strokeWidth={2.5}
+            dot={{ r: 4, fill: CHART.series, stroke: CHART.surface, strokeWidth: 2 }}
+            activeDot={{ r: 6, stroke: CHART.surface, strokeWidth: 2 }}
+            isAnimationActive={false}
           />
+          {hasStandard && (
+            <ReferenceLine
+              y={standardAvg}
+              stroke={CHART.reference}
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
+              ifOverflow="extendDomain"
+              label={<ChartRefLabel lines={['Standard Time เฉลี่ย', `${standardAvg.toFixed(2)} วินาที`]} />}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

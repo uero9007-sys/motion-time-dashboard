@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CHART, tooltipStyle } from '../chartTheme';
 import { fetchAllRows } from '../lib/fetchAll';
 import { matchesGroup, mean, sampleStdDev } from '../lib/ie';
 import type { DefectLog, ProcessGroup, Step, Study, StudyMetric } from '../types';
@@ -17,12 +18,6 @@ type Props = {
 
 type Stability = { label: string; className: string };
 
-const CHART = {
-  bar: '#A07C5B',
-  grid: '#EEE7DC',
-  axis: '#E4DCCF',
-  tick: '#7A6F63',
-};
 
 // เกณฑ์ CV ตั้งได้ในหน้าตั้งค่า (ค่าเริ่มต้น ≤10% เสถียร, 10–20% ควรติดตาม, >20% ไม่เสถียร)
 function getStability(cv: number, stable: number, watch: number): Stability {
@@ -195,11 +190,11 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
                 <XAxis type="number" tick={{ fontSize: 12, fill: CHART.tick }} tickLine={false} axisLine={{ stroke: CHART.axis }} />
                 <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 13, fill: CHART.tick }} tickLine={false} axisLine={false} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(160, 124, 91, 0.08)' }}
-                  contentStyle={{ borderRadius: 8, border: `1px solid ${CHART.axis}`, fontFamily: 'inherit' }}
+                  cursor={{ fill: CHART.cursor }}
+                  contentStyle={tooltipStyle}
                   formatter={(value) => [`${Number(value).toFixed(2)} วินาที`, 'เวลาเฉลี่ยต่อรอบ']}
                 />
-                <Bar dataKey="avgTime" fill={CHART.bar} radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar dataKey="avgTime" fill={CHART.bar} radius={[0, 2, 2, 0]} isAnimationActive={false} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
             <div className="table-scroll">
@@ -282,11 +277,11 @@ export default function AnalysisPage({ studies, steps, metrics, groups, isLoadin
                       axisLine={false}
                     />
                     <Tooltip
-                      cursor={{ fill: 'rgba(160, 124, 91, 0.08)' }}
-                      contentStyle={{ borderRadius: 8, border: `1px solid ${CHART.axis}`, fontFamily: 'inherit' }}
+                      cursor={{ fill: CHART.cursor }}
+                      contentStyle={tooltipStyle}
                       formatter={(value) => [`${Number(value).toFixed(1)}%`, 'สัดส่วนเวลา']}
                     />
-                    <Bar dataKey="share" fill={CHART.bar} radius={[0, 4, 4, 0]} barSize={18} />
+                    <Bar dataKey="share" fill={CHART.bar} radius={[0, 2, 2, 0]} isAnimationActive={false} barSize={18} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

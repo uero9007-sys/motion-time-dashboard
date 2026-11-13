@@ -12,7 +12,9 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CHART, axisTick, tooltipStyle } from '../chartTheme';
+import ChartRefLabel from '../components/ChartRefLabel';
 import { fetchAllRows } from '../lib/fetchAll';
 import {
   DEFAULT_SUGGESTION_RULES,
@@ -43,7 +45,6 @@ type Props = {
 };
 
 const LIBRARY_ID = 'library';
-const CHART = { bar: '#A07C5B', grid: '#EEE7DC', axis: '#E4DCCF', tick: '#7A6F63', line: '#5E7552' };
 const fmt = (n: number | null | undefined, digits = 2) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : n.toFixed(digits));
 const newId = () => crypto.randomUUID();
 // เวลาปัจจุบัน ใช้ในปุ่มบันทึก/Export เท่านั้น (ไม่ใช่ตอน render)
@@ -320,6 +321,11 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
   const s = summary!;
   const notEnough = [...processes.values()].filter((p) => !p.enoughData);
   const scaleMax = Math.max(line.cycleTimeSec, takt ?? 0, 1) * 1.15;
+  // สถานะเทียบ Takt ของแต่ละสถานี ใช้แต่งสีเท่านั้น (เกณฑ์เดียวกับ meetsTakt: เวลา ≤ Takt = ผ่าน)
+  const taktStateOf = (st: { isEmpty: boolean; timeSec: number }) => (takt && !st.isEmpty ? (st.timeSec > takt ? 'over' : 'within') : null);
+  // เส้นค่าเฉลี่ยของกราฟรายรอบ คิดจากจุดที่แสดงในกราฟเอง
+  const roundData = detail ? detail.roundSeries.map((r, i) => ({ round: i + 1, sec: Number(r.totalSec.toFixed(2)) })) : [];
+  const roundMean = roundData.length > 1 ? roundData.reduce((sum, r) => sum + r.sec, 0) / roundData.length : null;
 
   return (
     <>
@@ -448,11 +454,12 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
               <div className="lb-line">
                 {line.stations.map((st) => {
                   const pct = (v: number) => `${Math.min((v / scaleMax) * 100, 100)}%`;
+                  const taktState = taktStateOf(st);
                   return (
                     <DropZone
                       key={st.id}
                       id={st.id}
-                      className={`lb-station${st.isBottleneck ? ' is-bottleneck' : ''}${st.isEmpty ? ' is-empty' : ''}`}
+                      className={`lb-station${st.isBottleneck ? ' is-bottleneck' : ''}${st.isEmpty ? ' is-empty' : ''}${taktState ? ` is-${taktState}-takt` : ''}`}
                     >
                       <div className="lb-station-head">
                         <strong>สถานี {st.index}</strong>
@@ -461,14 +468,21 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
                           ลบ
                         </button>
                       </div>
-                      <div className="lb-bar" aria-hidden="true">
-                        <div className="lb-bar-fill" style={{ height: pct(st.timeSec) }} />
-                        {takt && <div className="lb-bar-takt" style={{ bottom: pct(takt) }} title={`Takt ${fmt(takt)} s`} />}
-                        {line.cycleTimeSec > 0 && <div className="lb-bar-ct" style={{ bottom: pct(line.cycleTimeSec) }} title={`CT ${fmt(line.cycleTimeSec)} s`} />}
-                      </div>
-                      <div className="lb-station-time">
-                        {st.isEmpty ? 'ว่าง' : `${fmt(st.timeSec)} s`}
-                        {!st.isEmpty && <small> · Idle {fmt(st.idleSec)} s</small>}
+                      <div className="lb-station-load">
+                        <div className="lb-bar" aria-hidden="true">
+                          <div className="lb-bar-fill" style={{ height: pct(st.timeSec) }} />
+                          {line.cycleTimeSec > 0 && <div className="lb-bar-ct" style={{ bottom: pct(line.cycleTimeSec) }} title={`CT ${fmt(line.cycleTimeSec)} s`} />}
+                          {takt && <div className="lb-bar-takt" style={{ bottom: pct(takt) }} title={`Takt ${fmt(takt)} s`} />}
+                        </div>
+                        <div className="lb-station-read">
+                          <span className="lb-station-time">{st.isEmpty ? 'ว่าง' : `${fmt(st.timeSec)} s`}</span>
+                          {!st.isEmpty && <span className="lb-station-idle">Idle {fmt(st.idleSec)} s</span>}
+                          {taktState && (
+                            <span className={`badge ${taktState === 'over' ? 'badge-bad' : 'badge-good'}`}>
+                              {taktState === 'over' ? 'เกิน Takt' : 'ภายใน Takt'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="lb-station-items">
                         {st.processKeys.map((k) => {
@@ -526,12 +540,12 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
                     </thead>
                     <tbody>
                       {line.stations.map((st) => (
-                        <tr key={st.id} className={st.isBottleneck ? 'lb-row-bottleneck' : undefined}>
+                        <tr key={st.id} className={`${st.isBottleneck ? 'lb-row-bottleneck' : ''}${taktStateOf(st) === 'over' ? ' lb-row-over' : ''}`.trim() || undefined}>
                           <td>สถานี {st.index}{st.isBottleneck ? ' (คอขวด)' : ''}</td>
                           <td>{st.processKeys.map((k) => processes.get(k)?.name).join(', ') || <span className="lb-muted">ว่าง</span>}</td>
-                          <td className="num">{st.isEmpty ? '—' : fmt(st.timeSec)}</td>
+                          <td className="num lb-over-cell">{st.isEmpty ? '—' : fmt(st.timeSec)}</td>
                           <td className="num">{fmt(st.idleSec)}</td>
-                          <td className="num">{st.utilizationVsTakt === null ? '—' : `${fmt(st.utilizationVsTakt, 1)}%`}</td>
+                          <td className="num lb-over-cell">{st.utilizationVsTakt === null ? '—' : `${fmt(st.utilizationVsTakt, 1)}%`}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -590,22 +604,30 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={detail.steps.map((st) => ({ name: st.name, sec: Number(st.meanSec.toFixed(2)) }))}>
                       <CartesianGrid stroke={CHART.grid} vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 12, fill: CHART.tick }} tickLine={false} axisLine={{ stroke: CHART.axis }} />
-                      <YAxis tick={{ fontSize: 12, fill: CHART.tick }} tickLine={false} axisLine={false} />
-                      <Tooltip formatter={(v) => [`${v} s`, 'เฉลี่ย']} />
-                      <Bar dataKey="sec" fill={CHART.bar} radius={[4, 4, 0, 0]} />
+                      <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: CHART.axis }} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} width={44} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CHART.cursor }} formatter={(v) => [`${Number(v).toFixed(2)} s`, 'เฉลี่ย']} />
+                      <Bar dataKey="sec" fill={CHART.bar} radius={[2, 2, 0, 0]} maxBarSize={48} isAnimationActive={false} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <div>
                   <h3>เวลารวมของ Process รายรอบ (วินาที)</h3>
                   <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={detail.roundSeries.map((r, i) => ({ round: i + 1, sec: Number(r.totalSec.toFixed(2)) }))}>
+                    <LineChart data={roundData} margin={{ top: 16, right: roundMean !== null ? 64 : 16, bottom: 0, left: 0 }}>
                       <CartesianGrid stroke={CHART.grid} vertical={false} />
-                      <XAxis dataKey="round" tick={{ fontSize: 12, fill: CHART.tick }} tickLine={false} axisLine={{ stroke: CHART.axis }} />
-                      <YAxis tick={{ fontSize: 12, fill: CHART.tick }} tickLine={false} axisLine={false} />
-                      <Tooltip formatter={(v) => [`${v} s`, 'เวลารวม']} labelFormatter={(l) => `รอบที่ ${l}`} />
-                      <Line dataKey="sec" stroke={CHART.line} strokeWidth={2} dot={{ r: 3 }} />
+                      <XAxis dataKey="round" tick={axisTick} tickLine={false} axisLine={{ stroke: CHART.axis }} tickFormatter={(v) => `รอบ ${v}`} minTickGap={12} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} width={44} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: CHART.axis }} formatter={(v) => [`${Number(v).toFixed(2)} s`, 'เวลารวม']} labelFormatter={(l) => `รอบที่ ${l}`} />
+                      {roundMean !== null && (
+                        <ReferenceLine
+                          y={roundMean}
+                          stroke={CHART.reference}
+                          strokeDasharray="6 4"
+                          label={<ChartRefLabel lines={['เฉลี่ย', `${roundMean.toFixed(2)} s`]} />}
+                        />
+                      )}
+                      <Line dataKey="sec" stroke={CHART.line} strokeWidth={2} dot={{ r: 3.5, fill: CHART.line, stroke: CHART.surface, strokeWidth: 2 }} isAnimationActive={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -776,9 +798,7 @@ function ProcessCard({
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
   return (
     <div ref={setNodeRef} style={style} className={`lb-card${isDragging ? ' is-dragging' : ''}${selected ? ' is-selected' : ''}${compact ? ' is-compact' : ''}`}>
-      <button className="lb-card-handle" {...listeners} {...attributes} aria-label={`ลาก ${p.name}`}>
-        ⠿
-      </button>
+      <button className="lb-card-handle" {...listeners} {...attributes} aria-label={`ลาก ${p.name}`} title="ลากเพื่อย้าย" />
       <button className="lb-card-body" onClick={() => onSelect(p.key)} title="ดูภายในของ Process นี้">
         <span className="lb-card-name">{p.name}</span>
         <span className="lb-card-meta">

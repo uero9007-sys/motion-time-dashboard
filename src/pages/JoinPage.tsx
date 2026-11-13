@@ -1,6 +1,7 @@
 // หน้า /join?code=XXXX — ปลายทางของ QR เมื่อสแกนด้วยกล้องมือถือปกติ (ไม่ได้เปิดผ่านแอป)
 // ใครก็เปิดได้ จึงห้ามแสดงชื่อหรือข้อมูลใดๆ ขององค์กร แสดงแค่วิธีเข้าร่วมและรหัส
 import { useState } from 'react';
+import AuthShell from '../components/AuthShell';
 import { codeFromLocation, formatInviteCode, INVITE_CODE_LENGTH, PUBLIC_SITE_URL, savePendingInvite } from '../lib/invite';
 
 // แอปมือถือเวอร์ชันเว็บ (npm run deploy:web ในโปรเจกต์แอป) และลิงก์ EAS Update สำหรับ Expo Go (npm run publish:expogo)
@@ -30,12 +31,7 @@ export default function JoinPage() {
   };
 
   return (
-    <div className="auth-screen">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <span className="sidebar-logo">MTS</span>
-          <span className="sidebar-title">Motion &amp; Time Study</span>
-        </div>
+    <AuthShell>
         <h1>คุณได้รับเชิญเข้าร่วมทีม</h1>
 
         <ol className="join-steps">
@@ -65,7 +61,6 @@ export default function JoinPage() {
           เข้าร่วมผ่านเว็บ Dashboard แทน
         </button>
         <p className="auth-note">ถ้ารหัสใช้ไม่ได้ แปลว่าเจ้าของทีมสร้างรหัสใหม่แล้ว ให้ขอ QR ล่าสุด</p>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

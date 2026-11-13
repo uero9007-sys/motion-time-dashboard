@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { SKIP_LOGIN, TEST_ORGANIZATION } from './lib/auth'
 import { isJoinPath } from './lib/invite'
+import { captureEmailVerified } from './lib/verify'
+
+// ต้องอ่านก่อนโหลด AuthGate: Supabase client ล้าง hash ของลิงก์ยืนยันทันทีที่ถูกสร้าง
+captureEmailVerified()
 
 const root = createRoot(document.getElementById('root')!)
 

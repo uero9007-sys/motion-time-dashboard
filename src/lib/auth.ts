@@ -12,6 +12,8 @@ export type Account = {
   onSwitchOrganization: (organizationId: string) => void;
   onSignOut: () => void;
   onMembershipsChanged: () => void;
+  // เปิดวิธีใช้งานครั้งแรกอีกครั้ง
+  onShowGuide: () => void;
 };
 
 export const ROLE_LABELS: Record<OrgRole, string> = {
