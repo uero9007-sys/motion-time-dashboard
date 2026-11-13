@@ -4,6 +4,7 @@ import { authErrorMessage, authRedirectUrl, MIN_PASSWORD_LENGTH } from '../lib/a
 import AuthShell from '../components/AuthShell';
 import { classifySignInError, markEmailVerified, VERIFY_MAX_ATTEMPTS, VERIFY_POLL_MS } from '../lib/verify';
 import { formatInviteCode, INVITE_CODE_LENGTH, normalizeInviteCode, peekPendingInvite } from '../lib/invite';
+import { consentTimestamp, privacyUrl } from '../lib/privacy';
 
 type Mode = 'password' | 'signup' | 'magic' | 'forgot';
 type Workspace = 'personal' | 'company' | 'join';
@@ -28,6 +29,8 @@ export default function LoginPage() {
   const [workspace, setWorkspace] = useState<Workspace>(pendingCode ? 'join' : 'personal');
   const [companyName, setCompanyName] = useState('');
   const [inviteCode, setInviteCode] = useState(pendingCode ? formatInviteCode(pendingCode) : '');
+  // ความยินยอมตาม PDPA: ต้องติ๊กก่อนสมัคร
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   // สมัครแล้วรอผู้ใช้กดลิงก์ยืนยันในอีเมล: เก็บอีเมล/รหัสผ่านไว้ในหน่วยความจำเพื่อเข้าสู่ระบบให้เองเมื่อยืนยันเสร็จ
   const [pendingVerify, setPendingVerify] = useState<{ email: string; password: string } | null>(null);
@@ -106,6 +109,7 @@ export default function LoginPage() {
       if (workspace === 'company' && !companyName.trim()) return fail('กรุณากรอกชื่อบริษัท');
       if (workspace === 'join' && normalizeInviteCode(inviteCode).length !== INVITE_CODE_LENGTH)
         return fail(`รหัสเชิญต้องมี ${INVITE_CODE_LENGTH} ตัวอักษร (เช่น ABCDE-FGHJK)`);
+      if (!acceptedPrivacy) return fail('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัคร');
     }
 
     setStatus({ kind: 'busy' });
@@ -130,6 +134,8 @@ export default function LoginPage() {
             company_name: workspace === 'company' ? companyName.trim() : '',
             // trigger ตรวจรหัสฝั่งเซิร์ฟเวอร์: ถูก → เข้าทีมนั้น, ผิด → ได้พื้นที่ส่วนตัว (แล้วกรอกรหัสใหม่ได้ในหน้าตั้งค่า)
             invite_code: workspace === 'join' ? normalizeInviteCode(inviteCode) : '',
+            // หลักฐานความยินยอมตาม PDPA (อยู่ใน raw_user_meta_data ไม่ต้องเพิ่มคอลัมน์)
+            privacy_accepted_at: consentTimestamp(),
           },
         },
       });
@@ -145,9 +151,14 @@ export default function LoginPage() {
     if (mode === 'magic') {
       const { error } = await supabase.auth.signInWithOtp({
         email: address,
-        options: { emailRedirectTo: authRedirectUrl() },
+        // ลิงก์อีเมลใช้ได้เฉพาะบัญชีที่มีอยู่แล้ว: สมัครใหม่ต้องผ่านฟอร์มสมัครที่มีช่องยินยอม PDPA
+        options: { emailRedirectTo: authRedirectUrl(), shouldCreateUser: false },
       });
-      if (error) return fail(error.message);
+      if (error) {
+        if (/signups? not allowed/i.test(error.message))
+          return fail('ยังไม่มีบัญชีของอีเมลนี้ กรุณาสมัครสมาชิกก่อน');
+        return fail(error.message);
+      }
       setStatus({ kind: 'sent', message: `ส่งลิงก์เข้าสู่ระบบไปที่ ${address} แล้ว เปิดอีเมลบนเครื่องนี้แล้วกดลิงก์` });
       return;
     }
@@ -262,6 +273,20 @@ export default function LoginPage() {
                   />
                 </label>
               )}
+
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  id="signup-consent"
+                  required
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                />
+                <span>
+                  ฉันได้อ่านและยอมรับ
+                  <a href={privacyUrl()} target="_blank" rel="noopener noreferrer">นโยบายความเป็นส่วนตัว</a>
+                </span>
+              </label>
             </>
           )}
 
@@ -276,7 +301,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className="btn btn-primary" disabled={busy || (isSignup && !acceptedPrivacy)}>
             {busy ? 'กำลังดำเนินการ...' : mode === 'password' ? 'เข้าสู่ระบบ' : isSignup ? 'สมัครและเข้าใช้งาน' : 'ส่งลิงก์'}
           </button>
         </form>

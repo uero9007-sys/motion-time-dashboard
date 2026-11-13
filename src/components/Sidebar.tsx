@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ROLE_LABELS, type Account, type Membership } from '../lib/auth';
 import type { Page } from '../types';
+import { privacyUrl } from '../lib/privacy';
 
 const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'home', label: 'หน้าหลัก' },
@@ -63,6 +64,7 @@ export function Sidebar({ page, onNavigate, organization, account }: Props) {
             <button className="link-button" onClick={account.onSignOut}>ออกจากระบบ</button>
           </>
         )}
+        <a className="sidebar-legal" href={privacyUrl()} target="_blank" rel="noopener noreferrer">นโยบายความเป็นส่วนตัว</a>
       </div>
     </aside>
   );

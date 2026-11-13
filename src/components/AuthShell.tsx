@@ -1,6 +1,7 @@
 // โครงหน้าที่ใช้ก่อนเข้าระบบ (เข้าสู่ระบบ / สมัคร / ยังไม่มีทีม / หน้า join)
 // ฟอร์มชิดซ้าย ส่วนที่ว่างบนจอกว้างแสดงใบบันทึกการจับเวลาตัวอย่าง (ซ่อนบนจอแคบด้วย CSS)
 import type { ReactNode } from 'react';
+import { privacyUrl } from '../lib/privacy';
 
 // เวลาที่จับได้ต่อรอบ (วินาที) ของงานตัวอย่าง ค่าเฉลี่ย / Normal time / Standard time คำนวณจากตัวเลขชุดนี้
 const SAMPLE_ROUNDS = 5;
@@ -99,6 +100,9 @@ export default function AuthShell({ children }: { children: ReactNode }) {
           <span className="sidebar-title">Motion &amp; Time Study</span>
         </div>
         {children}
+        <p className="auth-legal">
+          <a href={privacyUrl()} target="_blank" rel="noopener noreferrer">นโยบายความเป็นส่วนตัว</a>
+        </p>
       </div>
       <aside className="auth-aside" aria-label="ตัวอย่างใบบันทึกการจับเวลา">
         <SampleObservationSheet />
