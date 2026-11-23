@@ -3,19 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/motion-time-dashboard/favicon.svg" />
+    <link rel="apple-touch-icon" href="/motion-time-dashboard/apple-touch-icon.png" />
+    <link rel="manifest" href="/motion-time-dashboard/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0E6B66" />
+    <meta
+      name="description"
+      content="MTS Motion & Time Study เครื่องมือศึกษาเวลาและการเคลื่อนไหวสำหรับโรงงาน จับเวลางานด้วยแอป วิเคราะห์ Cycle Time ขนาดตัวอย่าง และ Line Balancing บนแดชบอร์ด"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MTS Motion & Time Study" />
+    <meta property="og:locale" content="th_TH" />
+    <meta property="og:title" content="MTS Motion & Time Study" />
+    <meta
+      property="og:description"
+      content="จับเวลางานด้วยแอป วิเคราะห์ Cycle Time ขนาดตัวอย่าง และ Line Balancing สำหรับโรงงาน"
+    />
+    <meta property="og:url" content="https://uero9007-sys.github.io/motion-time-dashboard/" />
+    <meta property="og:image" content="https://uero9007-sys.github.io/motion-time-dashboard/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MTS Motion & Time Study" />
+    <meta
+      name="twitter:description"
+      content="จับเวลางานด้วยแอป วิเคราะห์ Cycle Time ขนาดตัวอย่าง และ Line Balancing สำหรับโรงงาน"
+    />
+    <meta name="twitter:image" content="https://uero9007-sys.github.io/motion-time-dashboard/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>Motion &amp; Time Study</title>
-    <script type="module" crossorigin src="/motion-time-dashboard/assets/index-CV75T-s0.js"></script>
-    <link rel="modulepreload" crossorigin href="/motion-time-dashboard/assets/recharts-sU50Z1jR.js">
+    <script>
+      // ตั้งธีมก่อนวาดหน้าแรก กันจอขาวแวบในธีมมืด (ตรรกะเดียวกับ src/lib/theme.ts — key 'mts-theme')
+      (function () {
+        var pref = 'system';
+        try { pref = localStorage.getItem('mts-theme') || 'system'; } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0F1A1D' : '#0E6B66');
+      })();
+    </script>
+    <script type="module" crossorigin src="/motion-time-dashboard/assets/index-D_s1svSA.js"></script>
+    <link rel="modulepreload" crossorigin href="/motion-time-dashboard/assets/recharts-C_pPjX9j.js">
     <link rel="stylesheet" crossorigin href="/motion-time-dashboard/assets/index-BfRNCwxi.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>
