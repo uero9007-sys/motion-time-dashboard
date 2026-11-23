@@ -7,6 +7,7 @@ import AuthShell from './AuthShell';
 import WelcomeGuide from './WelcomeGuide';
 import { hasSeenGuide, markGuideSeen, takeEmailVerified } from '../lib/verify';
 import { supabase } from '../lib/supabase';
+import { describeError } from '../lib/network';
 import { authErrorMessage, loadSelectedOrgId, MIN_PASSWORD_LENGTH, saveSelectedOrgId, type Membership, type OrgRole } from '../lib/auth';
 import {
   formatInviteCode,
@@ -114,7 +115,7 @@ export default function AuthGate() {
       if (cancelled) return;
       if (error) {
         console.error('Error loading memberships:', error);
-        setMemberships({ userId, error: error.message });
+        setMemberships({ userId, error: describeError(error.message) });
         return;
       }
       const list = (data as unknown as { role: OrgRole; organizations: { id: string; name: string } }[])

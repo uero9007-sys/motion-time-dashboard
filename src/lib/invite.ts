@@ -1,5 +1,6 @@
 // รหัสเชิญเข้าองค์กร (QR Code) — ต้องตรงกับ generate_invite_code / normalize_invite_code ใน migration ขั้นที่ 6
 // และกับ lib/invite.ts ของแอปมือถือ
+import { isNetworkError, networkErrorMessage } from './network';
 
 // ที่อยู่เว็บจริง ใช้ใน QR เสมอ (แม้เปิดจาก localhost) เพราะมือถือของคนอื่นเปิด localhost ของเราไม่ได้
 // และแอปมือถือยอมรับเฉพาะ QR ที่ชี้มาโดเมนนี้
@@ -85,8 +86,7 @@ export function joinErrorMessage(result: Extract<JoinResult, { ok: false }>): st
 // error ของ RPC เอง (ไม่ใช่ผลลัพธ์ ok:false) เช่น เน็ตหลุด หรือยังไม่ได้รัน migration ขั้นที่ 6
 export function rpcErrorMessage(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed'))
-    return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบเน็ตแล้วลองใหม่';
+  if (isNetworkError(m)) return networkErrorMessage();
   if (m.includes('could not find the function') || m.includes('does not exist') || m.includes('invite_code'))
     return 'ระบบรหัสเชิญยังไม่พร้อม (ผู้ดูแลต้องรัน migration ขั้นที่ 6 ก่อน)';
   return message;

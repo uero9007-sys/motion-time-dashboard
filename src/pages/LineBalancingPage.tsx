@@ -16,6 +16,7 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, Responsiv
 import { useChartTheme } from '../chartTheme';
 import ChartRefLabel from '../components/ChartRefLabel';
 import { fetchAllRows } from '../lib/fetchAll';
+import { isNetworkError, networkErrorMessage } from '../lib/network';
 import {
   DEFAULT_SUGGESTION_RULES,
   DEFAULT_SUMMARY_OPTIONS,
@@ -158,7 +159,7 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
       if (error) {
         setLoad({
           kind: 'error',
-          message: /fetch|network/i.test(error) ? 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบเน็ตแล้วลองใหม่' : `โหลดข้อมูลไม่สำเร็จ: ${error}`,
+          message: isNetworkError(error) ? networkErrorMessage() : `โหลดข้อมูลไม่สำเร็จ: ${error}`,
         });
         return;
       }

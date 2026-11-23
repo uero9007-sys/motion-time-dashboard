@@ -1,3 +1,5 @@
+import { isNetworkError, networkErrorMessage } from './network';
+
 // บทบาทและสิทธิ์ของสมาชิกในบริษัท (ต้องตรงกับ type public.org_role ใน Supabase)
 export type OrgRole = 'owner' | 'admin' | 'member' | 'viewer';
 
@@ -79,8 +81,7 @@ export function authErrorMessage(message: string): string {
     return 'ส่งคำขอบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
   if (m.includes('provider is not enabled')) return 'ยังไม่ได้เปิดใช้การเข้าสู่ระบบด้วยวิธีนี้ (ต้องตั้งค่าใน Supabase)';
   if (m.includes('signups not allowed')) return 'อีเมลนี้ยังไม่มีบัญชีในระบบ';
-  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed'))
-    return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบเน็ตแล้วลองใหม่';
+  if (isNetworkError(m)) return networkErrorMessage();
   if (m.includes('database error saving new user'))
     return 'สมัครไม่สำเร็จ: ฐานข้อมูลยังไม่พร้อม (ผู้ดูแลต้องรัน migration ขั้นที่ 5 ก่อน)';
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'รูปแบบอีเมลไม่ถูกต้อง';

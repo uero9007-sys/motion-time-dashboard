@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { fetchAllRows } from './lib/fetchAll';
+import { describeError } from './lib/network';
 import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
 import ProcessReport from './components/ProcessReport';
 import { AppLayout } from './components/Sidebar';
@@ -93,7 +94,7 @@ function App({ organization, account }: Props) {
     const error = studiesResult.error ?? stepsResult.error;
     if (error) {
       console.error('Error loading studies/steps:', error);
-      setLoadError(error);
+      setLoadError(describeError(error));
       setIsLoading(false);
       return;
     }
