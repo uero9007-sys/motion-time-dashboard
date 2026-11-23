@@ -2,6 +2,7 @@
 // ฟอร์มชิดซ้าย ส่วนที่ว่างบนจอกว้างแสดงใบบันทึกการจับเวลาตัวอย่าง (ซ่อนบนจอแคบด้วย CSS)
 import type { ReactNode } from 'react';
 import { privacyUrl } from '../lib/privacy';
+import ThemeToggle from './ThemeToggle';
 
 // เวลาที่จับได้ต่อรอบ (วินาที) ของงานตัวอย่าง ค่าเฉลี่ย / Normal time / Standard time คำนวณจากตัวเลขชุดนี้
 const SAMPLE_ROUNDS = 5;
@@ -98,6 +99,9 @@ export default function AuthShell({ children }: { children: ReactNode }) {
         <div className="auth-brand">
           <span className="sidebar-logo">MTS</span>
           <span className="sidebar-title">Motion &amp; Time Study</span>
+        </div>
+        <div className="auth-theme">
+          <ThemeToggle />
         </div>
         {children}
         <p className="auth-legal">

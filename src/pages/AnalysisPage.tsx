@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CHART, tooltipStyle } from '../chartTheme';
+import { useChartTheme } from '../chartTheme';
 import { fetchAllRows } from '../lib/fetchAll';
 import { matchesGroup, mean, sampleStdDev } from '../lib/ie';
 import type { DefectLog, ProcessGroup, Step, Study, StudyMetric } from '../types';
@@ -28,6 +28,7 @@ function getStability(cv: number, stable: number, watch: number): Stability {
 
 const fmt = (n: number, digits = 2) => n.toFixed(digits);
 export default function AnalysisPage({ studies, steps, metrics, groups, isLoading, cvStable, cvWatch, organizationId }: Props) {
+  const { CHART, tooltipStyle } = useChartTheme();
   const [defects, setDefects] = useState<DefectLog[]>([]);
   const [pickedGroupId, setPickedGroupId] = useState<string | null>(null);
 

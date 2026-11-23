@@ -13,7 +13,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CHART, axisTick, tooltipStyle } from '../chartTheme';
+import { useChartTheme } from '../chartTheme';
 import ChartRefLabel from '../components/ChartRefLabel';
 import { fetchAllRows } from '../lib/fetchAll';
 import {
@@ -124,6 +124,7 @@ type LoadState = { kind: 'loading' } | { kind: 'error'; message: string } | { ki
 
 // ---------------------------------------------------------------------------
 export default function LineBalancingPage({ organizationId, defaultShiftMinutes }: Props) {
+  const { CHART, axisTick, tooltipStyle } = useChartTheme();
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
   const [w, setW] = useState<Working>(() => {

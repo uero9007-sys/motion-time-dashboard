@@ -37,6 +37,19 @@
       rel="stylesheet"
     />
     <title>Motion &amp; Time Study</title>
+    <script>
+      // ตั้งธีมก่อนวาดหน้าแรก กันจอขาวแวบในธีมมืด (ตรรกะเดียวกับ src/lib/theme.ts — key 'mts-theme')
+      (function () {
+        var pref = 'system';
+        try { pref = localStorage.getItem('mts-theme') || 'system'; } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0F1A1D' : '#0E6B66');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

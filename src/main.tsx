@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+// ตั้ง data-theme และติดตามธีมของระบบตั้งแต่เริ่ม (ทุกหน้า รวมถึง /privacy และ /join)
+import './themeStore'
 import { SKIP_LOGIN, TEST_ORGANIZATION } from './lib/auth'
 import { isJoinPath } from './lib/invite'
 import { isPrivacyPath } from './lib/privacy'

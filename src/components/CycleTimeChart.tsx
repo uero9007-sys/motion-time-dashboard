@@ -1,9 +1,10 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { CHART, axisTick, tooltipStyle } from '../chartTheme';
+import { useChartTheme } from '../chartTheme';
 import type { StudyMetric } from '../types';
 import ChartRefLabel from './ChartRefLabel';
 
 export default function CycleTimeChart({ metrics }: { metrics: StudyMetric[] }) {
+  const { CHART, axisTick, tooltipStyle } = useChartTheme();
   // เส้นอ้างอิง = Standard Time เฉลี่ยของรอบที่แสดงอยู่ (ค่าเดียวกับ KPI "Standard Time เฉลี่ย")
   const standardAvg =
     metrics.length > 0 ? metrics.reduce((sum, m) => sum + m.standardTimeSec, 0) / metrics.length : 0;

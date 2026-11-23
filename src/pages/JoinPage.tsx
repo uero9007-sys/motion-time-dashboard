@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import AuthShell from '../components/AuthShell';
 import { codeFromLocation, formatInviteCode, INVITE_CODE_LENGTH, PUBLIC_SITE_URL, savePendingInvite } from '../lib/invite';
+import '../App.css';
 
 // แอปมือถือเวอร์ชันเว็บ (npm run deploy:web ในโปรเจกต์แอป) และลิงก์ EAS Update สำหรับ Expo Go (npm run publish:expogo)
 const MOBILE_WEB_URL = `${PUBLIC_SITE_URL}app/`;

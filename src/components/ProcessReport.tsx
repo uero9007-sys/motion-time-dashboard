@@ -1,6 +1,7 @@
 // รายงานสรุปของ Process ใหญ่ สำหรับพิมพ์ / บันทึกเป็น PDF ผ่านหน้าต่าง Print ของเบราว์เซอร์
 // (ใช้ Print แทน jsPDF เพราะสระ/วรรณยุกต์ภาษาไทยจะแสดงถูกต้องด้วยฟอนต์ของเว็บ)
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+import { PRINT_CHART } from '../chartTheme';
 import { mean } from '../lib/ie';
 import type { StepSummary, StudyRow } from '../lib/export';
 
@@ -20,7 +21,7 @@ const fmtDateTime = (d: string) =>
 const s2 = (n: number) => n.toFixed(2);
 
 const CHART_WIDTH = 680;
-const axisTick = { fontSize: 10, fill: '#56676C' };
+const axisTick = { fontSize: 10, fill: PRINT_CHART.tick };
 
 export default function ProcessReport({ groupName, rows, stepSummaries, sampleSize, cvStable, cvWatch, generatedAt }: Props) {
   const totalSecs = rows.map((r) => r.totalMs / 1000);
@@ -167,11 +168,11 @@ export default function ProcessReport({ groupName, rows, stepSummaries, sampleSi
             layout="vertical"
             margin={{ top: 4, right: 24, bottom: 4, left: 8 }}
           >
-            <CartesianGrid stroke="#D2DAD9" horizontal={false} />
+            <CartesianGrid stroke={PRINT_CHART.grid} horizontal={false} />
             <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
             <YAxis type="category" dataKey="name" width={210} tick={axisTick} tickLine={false} axisLine={false} />
-            <Bar dataKey="value" fill="#0E6B66" radius={[0, 3, 3, 0]} isAnimationActive={false}
-              label={{ position: 'right', fontSize: 10, fill: '#15252A' }} />
+            <Bar dataKey="value" fill={PRINT_CHART.series} radius={[0, 3, 3, 0]} isAnimationActive={false}
+              label={{ position: 'right', fontSize: 10, fill: PRINT_CHART.ink }} />
           </BarChart>
         </div>
         {rows.length > 1 && (
@@ -187,16 +188,16 @@ export default function ProcessReport({ groupName, rows, stepSummaries, sampleSi
               }))}
               margin={{ top: 8, right: 24, bottom: 4, left: 8 }}
             >
-              <CartesianGrid stroke="#D2DAD9" vertical={false} />
-              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: '#A7B5B4' }}
-                label={{ value: 'รอบที่', position: 'insideBottomRight', offset: -2, fontSize: 10, fill: '#56676C' }} />
+              <CartesianGrid stroke={PRINT_CHART.grid} vertical={false} />
+              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: PRINT_CHART.axis }}
+                label={{ value: 'รอบที่', position: 'insideBottomRight', offset: -2, fontSize: 10, fill: PRINT_CHART.tick }} />
               <YAxis tick={axisTick} tickLine={false} axisLine={false} />
-              <Line dataKey="actual" name="เวลาจริง" stroke="#0E6B66" strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
-              <Line dataKey="standard" name="Standard" stroke="#15252A" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+              <Line dataKey="actual" name="เวลาจริง" stroke={PRINT_CHART.series} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
+              <Line dataKey="standard" name="Standard" stroke={PRINT_CHART.reference} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
             </LineChart>
             <div className="rp-legend">
-              <span><i style={{ background: '#0E6B66' }} />เวลาจริง</span>
-              <span><i style={{ background: '#15252A' }} />Standard Time</span>
+              <span><i style={{ background: PRINT_CHART.series }} />เวลาจริง</span>
+              <span><i style={{ background: PRINT_CHART.reference }} />Standard Time</span>
             </div>
           </div>
         )}
