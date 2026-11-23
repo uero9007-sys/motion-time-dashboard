@@ -1354,6 +1354,11 @@ section[id] {
   color: var(--color-danger);
 }
 
+.status-warn {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
 .setting-error {
   color: var(--color-danger);
   font-size: 13.5px;

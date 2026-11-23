@@ -4,6 +4,8 @@ import { DEFAULT_SETTINGS, LINE_BALANCE_STORAGE_KEY, type DashboardSettings, typ
 import type { Page } from '../types';
 import type { Membership } from '../lib/auth';
 import InviteCard from '../components/InviteCard';
+import { BACKUP_REMIND_DAYS, daysSince, downloadBackup, fetchBackup, needsBackupReminder, readLastBackup, writeLastBackup } from '../lib/backup';
+import { describeError } from '../lib/network';
 
 type Props = {
   settings: DashboardSettings;
@@ -13,7 +15,12 @@ type Props = {
   counts: { groups: number; studies: number; steps: number };
   // ไม่มี = โหมดทดลองที่ไม่ได้ Login (ไม่มีองค์กรจริงให้เชิญ)
   organization?: Membership;
+  // ใช้สำรองข้อมูล (มีเสมอ รวมถึงโหมดทดลอง)
+  organizationId: string;
+  organizationName: string;
 };
+
+type BackupState = { status: 'idle' | 'working' | 'done' | 'error'; message?: string };
 
 type Connection = { status: 'idle' | 'checking' | 'ok' | 'error'; message?: string };
 
@@ -50,9 +57,38 @@ function SettingRow({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-export default function SettingsPage({ settings, onChange, onReset, onRefresh, counts, organization }: Props) {
+export default function SettingsPage({ settings, onChange, onReset, onRefresh, counts, organization, organizationId, organizationName }: Props) {
   const [connection, setConnection] = useState<Connection>({ status: 'idle' });
   const [lineCleared, setLineCleared] = useState(false);
+  const [lastBackup, setLastBackup] = useState(() => readLastBackup(organizationId));
+  const [backup, setBackup] = useState<BackupState>({ status: 'idle' });
+
+  const runBackup = async () => {
+    setBackup({ status: 'working' });
+    const { data, error } = await fetchBackup(organizationId);
+    if (error) {
+      // ไม่ดาวน์โหลดไฟล์ที่ไม่ครบ ไฟล์สำรองที่ขาดบางตารางอันตรายกว่าไม่มีไฟล์
+      setBackup({ status: 'error', message: `สำรองไม่สำเร็จ: ${describeError(error)}` });
+      return;
+    }
+    try {
+      await downloadBackup(organizationName, data);
+    } catch (e) {
+      setBackup({ status: 'error', message: `สร้างไฟล์ไม่สำเร็จ: ${e instanceof Error ? e.message : String(e)}` });
+      return;
+    }
+    const now = new Date().toISOString();
+    writeLastBackup(organizationId, now);
+    setLastBackup(now);
+    const rows = data.studies.length;
+    setBackup({ status: 'done', message: `ดาวน์โหลดแล้ว (${rows} รอบ ${data.steps.length} Step)` });
+  };
+
+  const backupDays = daysSince(lastBackup);
+  const backupHint =
+    backupDays === null
+      ? 'ยังไม่เคยสำรองจากเบราว์เซอร์นี้ · ได้ไฟล์ Excel ตารางดิบ 4 แผ่น นำกลับเข้า Supabase ได้'
+      : `สำรองล่าสุด ${new Date(lastBackup as string).toLocaleDateString('th-TH')} (${backupDays === 0 ? 'วันนี้' : `${backupDays} วันก่อน`}) · แนะนำทุก ${BACKUP_REMIND_DAYS} วัน`;
 
   const checkConnection = async () => {
     setConnection({ status: 'checking' });
@@ -189,6 +225,19 @@ export default function SettingsPage({ settings, onChange, onReset, onRefresh, c
         </SettingRow>
         <SettingRow label="ข้อมูลที่โหลดไว้" hint={`${counts.groups} Process ใหญ่ · ${counts.studies} รอบ · ${counts.steps} Step`}>
           <button className="btn" onClick={onRefresh}>รีเฟรชข้อมูล</button>
+        </SettingRow>
+        <SettingRow label="สำรองข้อมูลทั้งหมด" hint={backupHint}>
+          <span className="connection">
+            {needsBackupReminder(lastBackup) && backup.status !== 'done' && (
+              <span className="connection-status status-warn">ถึงเวลาสำรองแล้ว</span>
+            )}
+            {(backup.status === 'done' || backup.status === 'error') && (
+              <span className={`connection-status status-${backup.status === 'done' ? 'ok' : 'error'}`}>{backup.message}</span>
+            )}
+            <button className="btn" onClick={runBackup} disabled={backup.status === 'working'}>
+              {backup.status === 'working' ? 'กำลังสำรอง...' : 'ดาวน์โหลดไฟล์สำรอง'}
+            </button>
+          </span>
         </SettingRow>
         <SettingRow label="ไลน์ที่จัดไว้ในหน้า &quot;การคำนวณ&quot;" hint="บันทึกไว้เฉพาะในเบราว์เซอร์นี้">
           <button className="btn" onClick={clearLineBalance} disabled={lineCleared}>

@@ -411,6 +411,8 @@ function App({ organization, account }: Props) {
             onRefresh={refreshAll}
             counts={{ groups: processGroups.length, studies: studies.length, steps: rawSteps.length }}
             organization={account ? organization : undefined}
+            organizationId={orgId}
+            organizationName={organization.name}
           />
         </Suspense>
       </AppLayout>
