@@ -40,6 +40,8 @@ import {
 } from '../lib/lineBalance';
 import { buildLineBalanceSheets } from '../lib/lineBalanceExport';
 import { LINE_BALANCE_STORAGE_KEY } from '../lib/settings';
+import { deleteTeamLayout, listTeamLayouts, saveTeamLayout, type SavedLayout } from '../lib/teamLayouts';
+import { describeError } from '../lib/network';
 
 type Props = {
   organizationId: string;
@@ -67,16 +69,6 @@ type Working = {
   stations: StationInput[];
   rules: SuggestionRules;
   kanban: { d: number; l: number; c: number; sf: number };
-};
-type SavedLayout = {
-  id: string;
-  name: string;
-  savedAt: string;
-  basis: TimeBasis;
-  lastN: number | null;
-  takt: number | null;
-  availableSec: number | null;
-  stations: StationInput[];
 };
 type LayoutStore = { version: 1; layouts: SavedLayout[] };
 
@@ -134,7 +126,13 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
     const saved = readJson<Working>(workingKey(organizationId));
     return saved?.version === 1 ? { ...defaultWorking(defaultShiftMinutes), ...saved } : defaultWorking(defaultShiftMinutes);
   });
-  const [layouts, setLayouts] = useState<SavedLayout[]>(() => readJson<LayoutStore>(layoutsKey(organizationId))?.layouts ?? []);
+  // ผังในเบราว์เซอร์ (แบบเดิม) ใช้เมื่อยังไม่มีตาราง line_layouts หรือโหมดทดลอง
+  const [localLayouts, setLocalLayouts] = useState<SavedLayout[]>(() => readJson<LayoutStore>(layoutsKey(organizationId))?.layouts ?? []);
+  // ผังของทีมในฐานข้อมูล (migration ขั้นที่ 9) — checking = ยังไม่รู้ว่ามีตารางไหม
+  const [team, setTeam] = useState<{ status: 'checking' | 'team' | 'local'; layouts: SavedLayout[] }>({ status: 'checking', layouts: [] });
+  const [teamReload, setTeamReload] = useState(0);
+  const [layoutBusy, setLayoutBusy] = useState(false);
+  const layouts = team.status === 'team' ? team.layouts : localLayouts;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [whatIf, setWhatIf] = useState<Record<string, number>>({});
   const [layoutName, setLayoutName] = useState('');
@@ -142,7 +140,22 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
   const [notice, setNotice] = useState('');
 
   useEffect(() => writeJson(workingKey(organizationId), w), [w, organizationId]);
-  useEffect(() => writeJson(layoutsKey(organizationId), { version: 1, layouts } satisfies LayoutStore), [layouts, organizationId]);
+  useEffect(() => writeJson(layoutsKey(organizationId), { version: 1, layouts: localLayouts } satisfies LayoutStore), [localLayouts, organizationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listTeamLayouts(organizationId).then((r) => {
+      if (cancelled) return;
+      if (!r.available) setTeam({ status: 'local', layouts: [] });
+      else {
+        setTeam({ status: 'team', layouts: r.layouts });
+        if (r.error) setNotice(`โหลดผังของทีมไม่สำเร็จ: ${describeError(r.error)}`);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, teamReload]);
 
   // โหลดครั้งเดียว (ลากวางไม่ยิง query ซ้ำ) เลือกเฉพาะคอลัมน์ที่ใช้ และดึงทีละหน้ากันข้อมูลถูกตัดที่ 1,000 แถว
   useEffect(() => {
@@ -266,22 +279,58 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
   };
 
   // ---------- ผังที่บันทึกไว้ ----------
-  const saveLayout = () => {
+  const saveLayout = async () => {
     const name = layoutName.trim() || `ผัง ${now().toLocaleString('th-TH')}`;
-    setLayouts((prev) => [
-      ...prev.filter((l) => l.name !== name),
-      { id: newId(), name, savedAt: now().toISOString(), basis: w.basis, lastN: w.lastN, takt, availableSec, stations: w.stations },
-    ]);
+    const data = { basis: w.basis, lastN: w.lastN, takt, availableSec, stations: w.stations };
+    if (team.status === 'team') {
+      setLayoutBusy(true);
+      const error = await saveTeamLayout(organizationId, name, data);
+      setLayoutBusy(false);
+      if (error) return setNotice(`บันทึกผังไม่สำเร็จ: ${describeError(error)}`);
+      setTeamReload((k) => k + 1);
+    } else {
+      setLocalLayouts((prev) => [...prev.filter((l) => l.name !== name), { id: newId(), name, savedAt: now().toISOString(), ...data }]);
+    }
     setLayoutName('');
     setNotice(`บันทึกผัง "${name}" แล้ว`);
+  };
+  // ย้ายผังเก่าในเบราว์เซอร์ขึ้นฐานข้อมูลของทีม (ชื่อที่ทีมมีอยู่แล้วข้ามไป ไม่เขียนทับของคนอื่น)
+  const moveLocalToTeam = async () => {
+    setLayoutBusy(true);
+    const taken = new Set(team.layouts.map((l) => l.name));
+    const failed: SavedLayout[] = [];
+    let moved = 0;
+    for (const l of localLayouts) {
+      if (taken.has(l.name)) {
+        failed.push(l);
+        continue;
+      }
+      const error = await saveTeamLayout(organizationId, l.name, l);
+      if (error) failed.push(l);
+      else moved += 1;
+    }
+    setLayoutBusy(false);
+    setLocalLayouts(failed);
+    setTeamReload((k) => k + 1);
+    setNotice(
+      failed.length === 0
+        ? `ย้าย ${moved} ผังขึ้นให้ทีมเห็นแล้ว`
+        : `ย้ายแล้ว ${moved} ผัง · เหลือ ${failed.length} ผังที่ชื่อซ้ำกับของทีมหรือย้ายไม่สำเร็จ (ยังอยู่ในเบราว์เซอร์นี้)`
+    );
   };
   const loadLayout = (l: SavedLayout) => {
     update({ stations: l.stations, basis: l.basis, lastN: l.lastN });
     setNotice(`โหลดผัง "${l.name}" แล้ว (Takt ใช้ค่าที่ตั้งอยู่ตอนนี้)`);
   };
-  const deleteLayout = (l: SavedLayout) => {
-    if (!window.confirm(`ลบผัง "${l.name}"?`)) return;
-    setLayouts((prev) => prev.filter((x) => x.id !== l.id));
+  const deleteLayout = async (l: SavedLayout) => {
+    if (!window.confirm(team.status === 'team' ? `ลบผัง "${l.name}"? (ทุกคนในทีมจะไม่เห็นผังนี้อีก)` : `ลบผัง "${l.name}"?`)) return;
+    if (team.status === 'team') {
+      const error = await deleteTeamLayout(l.id);
+      if (error) return setNotice(`ลบผังไม่สำเร็จ: ${describeError(error)}`);
+      setTeamReload((k) => k + 1);
+    } else {
+      setLocalLayouts((prev) => prev.filter((x) => x.id !== l.id));
+    }
   };
   const lineOfLayout = (l: SavedLayout) => {
     const s = raw ? summarizeProcesses(raw.studies, raw.steps, raw.groups, { ...summaryOptions, basis: l.basis, lastN: l.lastN }) : null;
@@ -700,13 +749,25 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
           {/* ---------- บันทึก / เปรียบเทียบ / Export ---------- */}
           <section className="card">
             <h2>บันทึกและส่งออกผังสายผลิต</h2>
-            <p className="lb-hint">บันทึกไว้ในเบราว์เซอร์นี้เท่านั้น (คนอื่นหรือเครื่องอื่นไม่เห็น)</p>
+            <p className="lb-hint">
+              {team.status === 'team'
+                ? 'บันทึกไว้ในฐานข้อมูล ทุกคนในองค์กรเห็นผังเดียวกัน (ชื่อซ้ำ = เขียนทับผังเดิม)'
+                : 'บันทึกไว้ในเบราว์เซอร์นี้เท่านั้น (คนอื่นหรือเครื่องอื่นไม่เห็น)'}
+            </p>
+            {team.status === 'team' && localLayouts.length > 0 && (
+              <p className="lb-hint">
+                มี {localLayouts.length} ผังที่บันทึกไว้ในเบราว์เซอร์นี้ก่อนหน้า{' '}
+                <button className="link-button" onClick={moveLocalToTeam} disabled={layoutBusy}>ย้ายขึ้นให้ทีมเห็น</button>
+              </p>
+            )}
             <div className="lb-whatif">
               <label>
                 ชื่อผัง
-                <input value={layoutName} placeholder="เช่น ก่อนปรับปรุง" onChange={(e) => setLayoutName(e.target.value)} />
+                <input value={layoutName} placeholder="เช่น ก่อนปรับปรุง" maxLength={100} onChange={(e) => setLayoutName(e.target.value)} />
               </label>
-              <button className="btn btn-primary" onClick={saveLayout} disabled={line.activeStations === 0}>บันทึกผัง</button>
+              <button className="btn btn-primary" onClick={saveLayout} disabled={line.activeStations === 0 || layoutBusy || team.status === 'checking'}>
+                {layoutBusy ? 'กำลังบันทึก...' : 'บันทึกผัง'}
+              </button>
               <button className="btn" onClick={exportExcel} disabled={line.activeStations === 0}>Export Excel</button>
             </div>
             {notice && <p className="auth-message auth-success" role="status">{notice}</p>}

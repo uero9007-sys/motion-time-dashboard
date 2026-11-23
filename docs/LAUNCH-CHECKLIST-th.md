@@ -88,6 +88,9 @@ Supabase → Organization → Billing (ชื่อเมนูอาจต่�
 
 - [ ] ตรวจว่ารันขั้นที่ 7 แล้วหรือยัง: `select proname from pg_proc where proname = 'submit_study_round';` ได้ 1 แถว = รันแล้ว ถ้าไม่ได้ ให้รัน `supabase/migrations/20261111000007_submit_round_and_trigger_cleanup.sql`
 - [ ] รันขั้นที่ 8 `supabase/migrations/20261124000008_realtime.sql` (Dashboard อัปเดตเองเมื่อมีรอบใหม่ และขึ้นป้าย "อัปเดตอัตโนมัติ" ข้างปุ่มรีเฟรช)
+- [ ] รันขั้นที่ 9 `supabase/migrations/20261124000009_line_layouts.sql` (ผัง Line Balancing ที่บันทึกไว้ ทุกคนในองค์กรเห็นร่วมกัน ผังเก่าในเบราว์เซอร์กด "ย้ายขึ้นให้ทีมเห็น" ได้)
+- [ ] (ถ้าต้องการ) ลบข้อมูลจำลองที่ใช้ทดสอบ: `supabase/maintenance/delete_simulated_data.sql` ดูส่วนที่ 1 ก่อน และสำรองข้อมูลก่อนลบ (Dashboard → ตั้งค่า → ดาวน์โหลดไฟล์สำรอง)
+- [x] ขั้นที่ 7 รันแล้ว (ตรวจเมื่อ 24 พ.ย. 2569: ฟังก์ชัน submit_study_round มีอยู่ในฐานข้อมูลจริง)
 - [ ] ถ้าใช้แผน Free: โปรเจกต์ถูกพักเมื่อไม่มีคนใช้ ~7 วัน อาการคือล็อกอินแล้วขึ้น "ติดต่อเซิร์ฟเวอร์ข้อมูลไม่ได้ (เน็ตของคุณใช้ได้ปกติ)" แก้ที่ supabase.com/dashboard → Restore project
 
 ## 10. ตรวจสอบรอบสุดท้าย
