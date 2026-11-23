@@ -1,4 +1,6 @@
 import type { ProcessGroup } from '../types';
+import LiveBadge from '../components/LiveBadge';
+import type { LiveStatus } from '../lib/useLiveReload';
 
 export type ProcessCard = ProcessGroup & {
   cycleCount: number;
@@ -11,9 +13,10 @@ type Props = {
   isLoading: boolean;
   onSelect: (groupId: string) => void;
   onRefresh: () => void;
+  liveStatus?: LiveStatus;
 };
 
-export default function ProcessPickerPage({ cards, isLoading, onSelect, onRefresh }: Props) {
+export default function ProcessPickerPage({ cards, isLoading, onSelect, onRefresh, liveStatus = 'off' }: Props) {
   return (
     <>
       <div className="page-header">
@@ -22,6 +25,7 @@ export default function ProcessPickerPage({ cards, isLoading, onSelect, onRefres
           <p className="page-subtitle">เลือก Process ใหญ่ที่ต้องการดูข้อมูล</p>
         </div>
         <div className="header-actions">
+          <LiveBadge status={liveStatus} />
           <button className="btn" onClick={onRefresh}>รีเฟรชข้อมูล</button>
         </div>
       </div>

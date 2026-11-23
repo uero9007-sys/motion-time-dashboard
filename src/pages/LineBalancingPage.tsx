@@ -17,6 +17,7 @@ import { useChartTheme } from '../chartTheme';
 import ChartRefLabel from '../components/ChartRefLabel';
 import { fetchAllRows } from '../lib/fetchAll';
 import { isNetworkError, networkErrorMessage } from '../lib/network';
+import { useLiveReload } from '../lib/useLiveReload';
 import {
   DEFAULT_SUGGESTION_RULES,
   DEFAULT_SUMMARY_OPTIONS,
@@ -128,6 +129,7 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
   const { CHART, axisTick, tooltipStyle } = useChartTheme();
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  useLiveReload(organizationId ?? '', () => setReloadKey((k) => k + 1), 'line-balance');
   const [w, setW] = useState<Working>(() => {
     const saved = readJson<Working>(workingKey(organizationId));
     return saved?.version === 1 ? { ...defaultWorking(defaultShiftMinutes), ...saved } : defaultWorking(defaultShiftMinutes);
@@ -147,7 +149,8 @@ export default function LineBalancingPage({ organizationId, defaultShiftMinutes 
     let cancelled = false;
     const filter: Record<string, string> = organizationId ? { organization_id: organizationId } : {};
     (async () => {
-      setLoad({ kind: 'loading' });
+      // โหลดซ้ำ (รอบใหม่เข้ามา) แสดงข้อมูลเดิมไปก่อน ไม่ขึ้น "กำลังโหลด" ทับผังที่จัดอยู่
+      setLoad((prev) => (prev.kind === 'ready' ? prev : { kind: 'loading' }));
       const [studies, steps, defects, groups] = await Promise.all([
         fetchAllRows<LbStudy>('studies', 'id, process_group_id, process_name, allowance_percent, quantity_produced, created_at', filter),
         fetchAllRows<LbStep>('steps', 'study_id, name, time_ms, performance_rating', filter),

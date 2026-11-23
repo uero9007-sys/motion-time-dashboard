@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { fetchAllRows } from './lib/fetchAll';
 import { describeError } from './lib/network';
+import { useLiveReload } from './lib/useLiveReload';
+import LiveBadge from './components/LiveBadge';
 import { buildStepSummaries, buildStudyRows, exportRawExcel, localDateStamp, type StudyRow } from './lib/export';
 import ProcessReport from './components/ProcessReport';
 import { AppLayout } from './components/Sidebar';
@@ -273,6 +275,12 @@ function App({ organization, account }: Props) {
     fetchProcessGroups();
   };
 
+  // รอบใหม่จากแอปมือถือ → โหลดใหม่เงียบๆ (ไม่ขึ้น "กำลังโหลด" ทับหน้าที่ดูอยู่)
+  const liveStatus = useLiveReload(orgId, () => {
+    loadData();
+    fetchProcessGroups();
+  });
+
   const backToPicker = () => {
     setPage('home');
     setSelectedGroupId(null);
@@ -419,7 +427,7 @@ function App({ organization, account }: Props) {
     return (
       <AppLayout {...layout}>
         {loadErrorBanner}
-        <ProcessPickerPage cards={processCards} isLoading={isLoading} onSelect={setSelectedGroupId} onRefresh={refreshAll} />
+        <ProcessPickerPage cards={processCards} isLoading={isLoading} onSelect={setSelectedGroupId} onRefresh={refreshAll} liveStatus={liveStatus} />
       </AppLayout>
     );
   }
@@ -463,6 +471,7 @@ function App({ organization, account }: Props) {
           <button className="btn" onClick={exportExcel} disabled={isExporting} title="ตารางข้อมูลดิบทุกรอบ ทุก Step และ Defect">
             Excel ข้อมูลดิบ
           </button>
+          <LiveBadge status={liveStatus} />
           <button className="btn" onClick={refreshAll}>รีเฟรชข้อมูล</button>
         </div>
       </div>
